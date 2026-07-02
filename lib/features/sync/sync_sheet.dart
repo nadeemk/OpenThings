@@ -93,10 +93,40 @@ class _SyncSheetState extends ConsumerState<_SyncSheet> {
       await action();
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      setState(() => _error = '$e');
+      setState(() => _error = _friendlyError(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// True when email + password are filled; otherwise shows a hint.
+  bool _hasCredentials() {
+    if (_email.text.trim().isEmpty || _password.text.isEmpty) {
+      setState(() => _error = 'Enter your email and a password.');
+      return false;
+    }
+    return true;
+  }
+
+  String _friendlyError(Object e) {
+    final s = '$e';
+    if (s.contains('anonymous_provider_disabled')) {
+      return 'Enter your email and a password.';
+    }
+    if (s.contains('invalid_credentials') ||
+        s.contains('Invalid login credentials')) {
+      return 'Wrong email or password.';
+    }
+    if (s.contains('email_not_confirmed')) {
+      return 'Check your inbox and confirm your email first.';
+    }
+    if (s.contains('user_already_exists') ||
+        s.contains('already registered')) {
+      return 'That email already has an account — try signing in.';
+    }
+    // Strip the AuthApiException(...) wrapper for anything else.
+    final m = RegExp(r'message: ([^,]+)').firstMatch(s);
+    return m != null ? m.group(1)! : s;
   }
 
   @override
@@ -251,18 +281,24 @@ class _SyncSheetState extends ConsumerState<_SyncSheet> {
               FilledButton(
                 onPressed: _busy
                     ? null
-                    : () => _run(() => sync.signIn(
-                        email: _email.text.trim(),
-                        password: _password.text)),
+                    : () {
+                        if (!_hasCredentials()) return;
+                        _run(() => sync.signIn(
+                            email: _email.text.trim(),
+                            password: _password.text));
+                      },
                 child: const Text('Sign in'),
               ),
               const SizedBox(width: OtSpacing.md),
               TextButton(
                 onPressed: _busy
                     ? null
-                    : () => _run(() => sync.signUp(
-                        email: _email.text.trim(),
-                        password: _password.text)),
+                    : () {
+                        if (!_hasCredentials()) return;
+                        _run(() => sync.signUp(
+                            email: _email.text.trim(),
+                            password: _password.text));
+                      },
                 child: const Text('Create account'),
               ),
             ],
