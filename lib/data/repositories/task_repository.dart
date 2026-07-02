@@ -257,8 +257,21 @@ class TaskRepository {
   Future<void> restore(String id) =>
       _patch(id, const TasksCompanion(trashedAt: Value(null)));
 
-  Future<void> emptyTrash() =>
-      (_db.delete(_db.tasks)..where((t) => t.trashedAt.isNotNull())).go();
+  Future<void> emptyTrash() async {
+    // Queue tombstones so the deletion reaches other devices.
+    final trashed = await (_db.select(_db.tasks)
+          ..where((t) => t.trashedAt.isNotNull()))
+        .get();
+    final now = _clock();
+    for (final t in trashed) {
+      await _db.into(_db.pendingDeletions).insert(
+            PendingDeletionsCompanion.insert(
+                entityId: t.id, entity: 'task', deletedAt: now),
+            mode: InsertMode.insertOrReplace,
+          );
+    }
+    await (_db.delete(_db.tasks)..where((t) => t.trashedAt.isNotNull())).go();
+  }
 
   // ---- Repeaters ----------------------------------------------------------
 

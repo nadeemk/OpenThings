@@ -46,6 +46,11 @@ class AreaRepository {
   /// Deleting an area orphans its contents back to the top level
   /// (Things asks first; the UI is responsible for confirmation).
   Future<void> delete(String id) async {
+    await _db.into(_db.pendingDeletions).insert(
+          PendingDeletionsCompanion.insert(
+              entityId: id, entity: 'area', deletedAt: _clock()),
+          mode: InsertMode.insertOrReplace,
+        );
     await (_db.update(_db.tasks)..where((t) => t.areaId.equals(id)))
         .write(const TasksCompanion(areaId: Value(null)));
     await (_db.delete(_db.areas)..where((a) => a.id.equals(id))).go();

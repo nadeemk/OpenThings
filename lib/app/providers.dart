@@ -7,6 +7,9 @@ import '../data/repositories/area_repository.dart';
 import '../data/repositories/checklist_repository.dart';
 import '../data/repositories/tag_repository.dart';
 import '../data/repositories/task_repository.dart';
+import '../sync/supabase_sync_service.dart';
+import '../sync/sync_config.dart';
+import '../sync/sync_service.dart';
 
 /// The single app-wide database instance.
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -105,3 +108,20 @@ class ExpandedTaskId extends Notifier<String?> {
 
 final expandedTaskIdProvider =
     NotifierProvider<ExpandedTaskId, String?>(ExpandedTaskId.new);
+
+// ---- Sync -------------------------------------------------------------------
+
+/// The sync backend. NoopSyncService unless SUPABASE_URL /
+/// SUPABASE_ANON_KEY are provided at build time (see SyncConfig).
+final syncServiceProvider = Provider<SyncService>((ref) {
+  if (!SyncConfig.enabled) return NoopSyncService();
+  final service = SupabaseSyncService(
+    ref.watch(databaseProvider),
+    supabaseClient(),
+  );
+  ref.onDispose(service.dispose);
+  return service;
+});
+
+final syncStatusProvider = StreamProvider<SyncStatus>(
+    (ref) => ref.watch(syncServiceProvider).status);

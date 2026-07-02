@@ -47,8 +47,14 @@ class ChecklistRepository {
   Future<void> setOrderIndex(String id, double orderIndex) =>
       _patch(id, ChecklistItemsCompanion(orderIndex: Value(orderIndex)));
 
-  Future<void> delete(String id) =>
-      (_db.delete(_db.checklistItems)..where((c) => c.id.equals(id))).go();
+  Future<void> delete(String id) async {
+    await _db.into(_db.pendingDeletions).insert(
+          PendingDeletionsCompanion.insert(
+              entityId: id, entity: 'checklist_item', deletedAt: _clock()),
+          mode: InsertMode.insertOrReplace,
+        );
+    await (_db.delete(_db.checklistItems)..where((c) => c.id.equals(id))).go();
+  }
 
   Future<void> _patch(String id, ChecklistItemsCompanion patch) =>
       (_db.update(_db.checklistItems)..where((c) => c.id.equals(id)))

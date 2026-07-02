@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../core/theme/tokens.dart';
 import '../features/project/project_screen.dart';
 import '../features/shortcuts/app_shortcuts.dart';
+import '../features/sync/sync_sheet.dart';
 import 'built_in_lists.dart';
 import 'providers.dart';
 
@@ -176,7 +177,7 @@ class Sidebar extends ConsumerWidget {
           ),
         ),
         const Divider(),
-        // ---- New list button ----
+        // ---- New list + sync status ----
         Padding(
           padding: const EdgeInsets.all(OtSpacing.sm),
           child: Row(
@@ -186,6 +187,8 @@ class Sidebar extends ConsumerWidget {
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: const Text('New List'),
               ),
+              const Spacer(),
+              const SyncStatusButton(),
             ],
           ),
         ),

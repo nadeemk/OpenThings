@@ -130,7 +130,34 @@ class TaskTags extends Table {
   Set<Column> get primaryKey => {taskId, tagId};
 }
 
-@DriftDatabase(tables: [Areas, Tasks, ChecklistItems, Tags, TaskTags])
+/// Key-value store for sync bookkeeping (watermarks, device id).
+class SyncState extends Table {
+  TextColumn get key => text()();
+  TextColumn get value => text()();
+
+  @override
+  Set<Column> get primaryKey => {key};
+}
+
+/// Local queue of hard deletions awaiting push to the server.
+class PendingDeletions extends Table {
+  TextColumn get entityId => text()();
+  TextColumn get entity => text()();
+  DateTimeColumn get deletedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {entityId, entity};
+}
+
+@DriftDatabase(tables: [
+  Areas,
+  Tasks,
+  ChecklistItems,
+  Tags,
+  TaskTags,
+  SyncState,
+  PendingDeletions,
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -138,7 +165,17 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(syncState);
+            await m.createTable(pendingDeletions);
+          }
+        },
+      );
 
   static QueryExecutor _openConnection() {
     return driftDatabase(

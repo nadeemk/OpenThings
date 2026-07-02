@@ -34,6 +34,11 @@ class TagRepository {
           TagsCompanion(title: Value(title), modifiedAt: Value(_clock())));
 
   Future<void> delete(String id) async {
+    await _db.into(_db.pendingDeletions).insert(
+          PendingDeletionsCompanion.insert(
+              entityId: id, entity: 'tag', deletedAt: _clock()),
+          mode: InsertMode.insertOrReplace,
+        );
     await (_db.delete(_db.taskTags)..where((tt) => tt.tagId.equals(id))).go();
     // Re-parent children of a deleted nested tag.
     await (_db.update(_db.tags)..where((t) => t.parentTagId.equals(id)))
