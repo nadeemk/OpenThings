@@ -10,6 +10,8 @@ import '../data/repositories/task_repository.dart';
 import '../domain/dates.dart' as d;
 import '../integrations/calendar_service.dart';
 import '../integrations/notification_service.dart';
+import '../integrations/share_intent_service.dart';
+import '../integrations/today_widget_service.dart';
 import '../sync/supabase_sync_service.dart';
 import '../sync/sync_config.dart';
 import '../sync/sync_service.dart';
@@ -150,3 +152,14 @@ final todayEventsProvider = FutureProvider<List<MirroredEvent>>((ref) {
       .watch(calendarServiceProvider)
       .eventsBetween(t, t.add(const Duration(days: 1)));
 });
+
+/// Android share-target: reading this once arms the listener.
+final shareIntentServiceProvider = Provider<ShareIntentService>((ref) {
+  final service = ShareIntentService(ref.watch(taskRepositoryProvider));
+  service.init();
+  return service;
+});
+
+/// Android home-screen Today widget updater.
+final todayWidgetServiceProvider =
+    Provider<TodayWidgetService>((ref) => TodayWidgetService());

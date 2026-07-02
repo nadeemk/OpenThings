@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../core/theme/tokens.dart';
 import '../features/lists/magic_plus.dart';
 import '../features/project/project_screen.dart';
+import '../features/quick_entry/quick_entry.dart';
 import '../features/shortcuts/app_shortcuts.dart';
 import '../features/sync/sync_sheet.dart';
+import '../integrations/global_hotkey_service.dart';
 import 'built_in_lists.dart';
 import 'providers.dart';
 
@@ -16,18 +18,51 @@ const _kSidebarBreakpoint = 700.0;
 
 /// Adaptive navigation shell: persistent sidebar on desktop/web/tablet,
 /// bottom navigation + drawer on phones.
-class AppShell extends ConsumerWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Arm the reminder scheduler for the app's lifetime.
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  GlobalHotkeyService? _hotkeys;
+
+  @override
+  void initState() {
+    super.initState();
+    // OS-global Quick Entry hotkey on desktop.
+    _hotkeys = GlobalHotkeyService(() async {
+      if (mounted) await showQuickEntry(context, ref);
+    })
+      ..init();
+  }
+
+  @override
+  void dispose() {
+    _hotkeys?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Arm the reminder scheduler and Android share-target listener.
     ref.watch(notificationServiceProvider);
+    ref.watch(shareIntentServiceProvider);
+    // Keep the Android home-screen widget in sync with Today.
+    ref.listen(todayProvider, (previous, next) {
+      final view = next.value;
+      if (view != null) {
+        ref.read(todayWidgetServiceProvider).update(view);
+      }
+    });
     final wide = MediaQuery.sizeOf(context).width >= _kSidebarBreakpoint;
     return AppShortcuts(
-      child: wide ? _WideShell(child: child) : _NarrowShell(child: child),
+      child: wide
+          ? _WideShell(child: widget.child)
+          : _NarrowShell(child: widget.child),
     );
   }
 }
