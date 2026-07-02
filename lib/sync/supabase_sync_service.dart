@@ -88,9 +88,11 @@ class SupabaseSyncService implements SyncService {
     _statusController.add(SyncStatus.connecting);
     // Sync now, then poll as a fallback and subscribe for pushes.
     unawaited(syncNow());
+    // Fallback poll — snappy enough to feel live even if Realtime is
+    // unavailable, cheap enough for a single user.
     _pollTimer?.cancel();
     _pollTimer =
-        Timer.periodic(const Duration(minutes: 2), (_) => syncNow());
+        Timer.periodic(const Duration(seconds: 15), (_) => syncNow());
 
     // Push local edits as they happen: watch the content tables (not the
     // sync-bookkeeping tables, to avoid a feedback loop) and sync ~1s
@@ -110,17 +112,20 @@ class SupabaseSyncService implements SyncService {
       _debounce = Timer(const Duration(milliseconds: 900), syncNow);
     });
 
-    // Pull instantly when another device changes anything.
+    // Pull instantly when another device changes anything (requires the
+    // tables to be in the supabase_realtime publication — see
+    // supabase/migrations/0003_realtime.sql).
     _channel?.unsubscribe();
-    _channel = _client
-        .channel('sync-nudge')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'tasks',
-          callback: (_) => syncNow(),
-        )
-        .subscribe();
+    var channel = _client.channel('sync-nudge');
+    for (final table in const ['tasks', 'areas', 'checklist_items', 'tags']) {
+      channel = channel.onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: table,
+        callback: (_) => syncNow(),
+      );
+    }
+    _channel = channel..subscribe();
   }
 
   void _stopContinuousSync() {
