@@ -12,11 +12,14 @@ A cross-platform clone of [Things 3](https://culturedcode.com/things/) built wit
 - **Quick Find** (⌘K): type-travel to any list, project, tag, or to-do
 - **Quick Entry** (⌃Space): capture dialog with NL scheduling
 - **Magic Plus**: drag the + button to insert a to-do exactly where you drop it
-- Multi-select + batch edit, swipe actions, keyboard-first (⌘N, ⌘1–5, ⌘T/⌘E/⌘O, ⌘., ⌘←/→…)
+- Multi-select + batch edit, drag-to-reorder, swipe actions (mobile), hover actions (desktop), keyboard-first (⌘N, ⌘1–5, ⌘T/⌘E/⌘O, ⌘⇧T, ⌘., ⌘←/→…)
+- **Tags**: picker with inline creation (⌘⇧T), tappable chips, app-wide tag filter screens
 - Project **progress pies**, Markdown notes, light/dark mode
 - **Reminders** as local notifications; read-only **calendar mirror** in Today
+- **OS-global Quick Entry hotkey** (⌃Space) on macOS/Windows/Linux
+- **Android share-target** (share text → Inbox) and **Android home-screen Today widget**
 - `things://` / `openthings://` deep links (`/add?title=…&when=tomorrow`)
-- Optional **multi-device sync** via Supabase (offline-first, LWW, tombstoned deletes)
+- Optional **multi-device sync**: PowerSync transport or direct Supabase engine (offline-first, LWW, tombstoned deletes)
 
 ## Architecture
 
@@ -62,11 +65,10 @@ flutter run --dart-define=SUPABASE_URL=https://xyz.supabase.co \
             --dart-define=SUPABASE_ANON_KEY=eyJ…
 ```
 
-Sign in from the sidebar footer. Sync is watermark-based push/pull with row-level last-writer-wins, realtime nudge for instant propagation, and tombstones for hard deletes. Without keys the app runs 100% local.
+Sign in from the sidebar footer (email/password or Apple/Google OAuth). Sync is watermark-based push/pull with row-level last-writer-wins, realtime nudge for instant propagation, and tombstones for hard deletes. Without keys the app runs 100% local.
 
-## Known gaps vs. Things 3
+**PowerSync transport** (optional): create a [PowerSync](https://powersync.com) instance connected to your Supabase Postgres and add `--dart-define=POWERSYNC_URL=https://xyz.powersync.journeyapps.com`. The `SyncService` seam selects PowerSync when configured; drift remains the app's source of truth, with the PowerSync database as the offline-first sync transport.
 
-- Home-screen/lock-screen widgets (needs per-platform native widget code)
-- Mail-to-Things email capture
-- Global OS-level Quick Entry hotkey outside the app window
-- Tag filtering UI (tags render on rows; the data layer supports filtering)
+## iOS-only caveats
+
+Two surfaces require Xcode-managed extension targets that can't be added as plain files, so they're Android/desktop-complete but pending on iOS: the share-sheet extension (Android share-target works) and the WidgetKit widget (Android home-screen widget works). Mail-to-Things-style email capture would need a server-side inbound-email service and is out of scope.
