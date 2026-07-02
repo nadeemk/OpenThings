@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -145,9 +146,21 @@ class _SyncSheetState extends ConsumerState<_SyncSheet> {
                 ),
                 const SizedBox(width: OtSpacing.md),
                 TextButton(
-                  onPressed:
-                      _busy ? null : () => _run(() => sync.signOut()),
-                  child: const Text('Sign out'),
+                  onPressed: _busy
+                      ? null
+                      : () => _run(() async {
+                            await sync.signOut();
+                            // On the web (this could be a shared/public
+                            // computer) erase the local copy so no to-dos
+                            // are left behind. Native devices keep their
+                            // cache for fast restart.
+                            if (kIsWeb) {
+                              await ref
+                                  .read(databaseProvider)
+                                  .wipeLocalData();
+                            }
+                          }),
+                  child: Text(kIsWeb ? 'Sign out & clear' : 'Sign out'),
                 ),
                 const Spacer(),
                 TextButton(
@@ -180,7 +193,14 @@ class _SyncSheetState extends ConsumerState<_SyncSheet> {
                             ),
                           );
                           if (confirmed == true) {
-                            await _run(() => sync.deleteAccount());
+                            await _run(() async {
+                              await sync.deleteAccount();
+                              // Remove the local copy too, on every
+                              // platform — the account is gone.
+                              await ref
+                                  .read(databaseProvider)
+                                  .wipeLocalData();
+                            });
                           }
                         },
                   child: const Text('Delete account'),

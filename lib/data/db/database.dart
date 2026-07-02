@@ -177,6 +177,17 @@ class AppDatabase extends _$AppDatabase {
         },
       );
 
+  /// Erases all local data (used when signing out on a shared/public
+  /// browser so no to-dos are left behind). Synced data is untouched on
+  /// the server and returns on next sign-in.
+  Future<void> wipeLocalData() async {
+    await transaction(() async {
+      for (final table in allTables) {
+        await delete(table).go();
+      }
+    });
+  }
+
   static QueryExecutor _openConnection() {
     return driftDatabase(
       name: 'openthings',
