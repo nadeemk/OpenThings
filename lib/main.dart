@@ -26,7 +26,7 @@ class OpenThingsApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
-      title: 'OpenThings',
+      title: 'Morrow',
       debugShowCheckedModeBanner: false,
       theme: OtTheme.light(),
       darkTheme: OtTheme.dark(),

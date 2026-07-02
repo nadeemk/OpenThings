@@ -133,7 +133,7 @@ class _SyncSheetState extends ConsumerState<_SyncSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Things Cloud (yours)', style: theme.textTheme.titleLarge),
+            Text('Morrow Cloud', style: theme.textTheme.titleLarge),
             const SizedBox(height: OtSpacing.md),
             Row(
               children: [

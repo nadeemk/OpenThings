@@ -1,6 +1,8 @@
-# OpenThings
+# Morrow
 
-A cross-platform clone of [Things 3](https://culturedcode.com/things/) built with Flutter — **one codebase for iOS, Android, macOS, Windows, Linux, and Web**. Local-first: every feature works fully offline; sync is additive.
+*(repo: OpenThings — the project began as an open Things 3 study)*
+
+A calm, keyboard-first to-do app built with Flutter — **one codebase for iOS, Android, macOS, Windows, Linux, and Web**. Local-first: every feature works fully offline; sync is additive. Live at [openthings-web-nk.web.app](https://openthings-web-nk.web.app).
 
 ## Features
 
