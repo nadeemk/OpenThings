@@ -48,7 +48,11 @@ class _TodoCheckboxState extends State<TodoCheckbox>
         ? OtColors.darkTextSecondary
         : const Color(0xFFC7C7CC);
 
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      checked: widget.checked,
+      label: widget.checked ? 'Mark as open' : 'Mark as completed',
+      child: GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => widget.onChanged(!widget.checked),
       child: Padding(
@@ -82,6 +86,7 @@ class _TodoCheckboxState extends State<TodoCheckbox>
             ),
           ),
         ),
+      ),
       ),
     );
   }
