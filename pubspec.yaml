@@ -40,10 +40,16 @@ dependencies:
   timezone: ^0.10.1
   flutter_timezone: ^4.1.1
   flutter_markdown_plus: ^1.0.3
-  device_calendar: ^3.9.0
+  device_calendar: ^4.3.3
   home_widget: ^0.8.0
   hotkey_manager: ^0.2.3
   window_manager: ^0.4.3
+
+# device_calendar 4.x pins timezone ^0.9 while flutter_local_notifications
+# 19.x needs ^0.10; the timezone API used by device_calendar is unchanged
+# between the two, so force the newer one.
+dependency_overrides:
+  timezone: ^0.10.1
 
 dev_dependencies:
   flutter_test:
