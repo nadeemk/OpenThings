@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/db/database.dart';
@@ -42,9 +43,12 @@ class SupabaseSyncService implements SyncService {
   final SupabaseClient _client;
   final _statusController = StreamController<SyncStatus>.broadcast();
   StreamSubscription<AuthState>? _authSub;
+  StreamSubscription<Set<TableUpdate>>? _localSub;
   Timer? _pollTimer;
+  Timer? _debounce;
   RealtimeChannel? _channel;
   bool _syncing = false;
+  bool _resyncQueued = false;
 
   static const _pushKey = 'lastPushedAt';
   static const _pullKey = 'lastPulledAt';
@@ -87,6 +91,26 @@ class SupabaseSyncService implements SyncService {
     _pollTimer?.cancel();
     _pollTimer =
         Timer.periodic(const Duration(minutes: 2), (_) => syncNow());
+
+    // Push local edits as they happen: watch the content tables (not the
+    // sync-bookkeeping tables, to avoid a feedback loop) and sync ~1s
+    // after the last change.
+    _localSub?.cancel();
+    _localSub = _db
+        .tableUpdates(TableUpdateQuery.onAllTables([
+          _db.tasks,
+          _db.areas,
+          _db.checklistItems,
+          _db.tags,
+          _db.taskTags,
+          _db.pendingDeletions,
+        ]))
+        .listen((_) {
+      _debounce?.cancel();
+      _debounce = Timer(const Duration(milliseconds: 900), syncNow);
+    });
+
+    // Pull instantly when another device changes anything.
     _channel?.unsubscribe();
     _channel = _client
         .channel('sync-nudge')
@@ -102,13 +126,23 @@ class SupabaseSyncService implements SyncService {
   void _stopContinuousSync() {
     _pollTimer?.cancel();
     _pollTimer = null;
+    _debounce?.cancel();
+    _debounce = null;
+    _localSub?.cancel();
+    _localSub = null;
     _channel?.unsubscribe();
     _channel = null;
   }
 
   @override
   Future<void> syncNow() async {
-    if (_syncing || !isSignedIn) return;
+    if (!isSignedIn) return;
+    // If a sync is already running, remember to run once more after it so
+    // edits made mid-sync aren't missed.
+    if (_syncing) {
+      _resyncQueued = true;
+      return;
+    }
     _syncing = true;
     _statusController.add(SyncStatus.syncing);
     try {
@@ -116,10 +150,15 @@ class SupabaseSyncService implements SyncService {
       await _push();
       await _pull();
       _statusController.add(SyncStatus.upToDate);
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('[sync] failed: $e\n$st');
       _statusController.add(SyncStatus.error);
     } finally {
       _syncing = false;
+    }
+    if (_resyncQueued) {
+      _resyncQueued = false;
+      unawaited(syncNow());
     }
   }
 

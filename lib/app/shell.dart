@@ -51,6 +51,9 @@ class _AppShellState extends ConsumerState<AppShell> {
     // Arm the reminder scheduler and Android share-target listener.
     ref.watch(notificationServiceProvider);
     ref.watch(shareIntentServiceProvider);
+    // Instantiate sync eagerly so it runs on every layout (on phones the
+    // sidebar — which also reads it — lives in a closed drawer).
+    ref.watch(syncServiceProvider);
     // Keep the Android home-screen widget in sync with Today.
     ref.listen(todayProvider, (previous, next) {
       final view = next.value;
