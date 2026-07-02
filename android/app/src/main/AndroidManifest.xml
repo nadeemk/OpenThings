@@ -29,12 +29,11 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- things:// / openthings:// deep links (Quick Entry, /add) -->
+            <!-- openthings:// deep links (Quick Entry, /add) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="things"/>
                 <data android:scheme="openthings"/>
             </intent-filter>
             <!-- Share-target: send text to OpenThings to capture a to-do -->

@@ -73,7 +73,6 @@
 			<string>com.openthings.deeplink</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>things</string>
 				<string>openthings</string>
 			</array>
 		</dict>

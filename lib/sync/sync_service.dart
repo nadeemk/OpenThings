@@ -23,6 +23,10 @@ abstract interface class SyncService {
 
   Future<void> signOut();
 
+  /// Permanently deletes the account and all synced data (local data is
+  /// untouched). Signs out afterwards.
+  Future<void> deleteAccount();
+
   /// Whether a user session exists.
   bool get isSignedIn;
 
@@ -56,6 +60,9 @@ class NoopSyncService implements SyncService {
 
   @override
   Future<void> signOut() async {}
+
+  @override
+  Future<void> deleteAccount() async {}
 
   @override
   Future<void> syncNow() async {}

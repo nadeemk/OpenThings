@@ -149,6 +149,42 @@ class _SyncSheetState extends ConsumerState<_SyncSheet> {
                       _busy ? null : () => _run(() => sync.signOut()),
                   child: const Text('Sign out'),
                 ),
+                const Spacer(),
+                TextButton(
+                  style: TextButton.styleFrom(
+                      foregroundColor: OtColors.deadlineRed),
+                  onPressed: _busy
+                      ? null
+                      : () async {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (dialogContext) => AlertDialog(
+                              title: const Text('Delete account?'),
+                              content: const Text(
+                                  'This permanently deletes your account '
+                                  'and all synced data. Data on this '
+                                  'device is kept.'),
+                              actions: [
+                                TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(dialogContext, false),
+                                    child: const Text('Cancel')),
+                                FilledButton(
+                                    style: FilledButton.styleFrom(
+                                        backgroundColor:
+                                            OtColors.deadlineRed),
+                                    onPressed: () =>
+                                        Navigator.pop(dialogContext, true),
+                                    child: const Text('Delete')),
+                              ],
+                            ),
+                          );
+                          if (confirmed == true) {
+                            await _run(() => sync.deleteAccount());
+                          }
+                        },
+                  child: const Text('Delete account'),
+                ),
               ],
             ),
             const SizedBox(height: OtSpacing.xl),

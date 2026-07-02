@@ -1,12 +1,12 @@
 {
-    "name": "openthings",
-    "short_name": "openthings",
+    "name": "OpenThings — To-Do & Planning",
+    "short_name": "OpenThings",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#FFFFFF",
+    "theme_color": "#2E7CF6",
+    "description": "A beautiful, keyboard-first to-do app. Plan your day with Today, Upcoming, and Someday. Works offline.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

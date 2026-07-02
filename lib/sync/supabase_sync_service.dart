@@ -74,6 +74,12 @@ class SupabaseSyncService implements SyncService {
   @override
   Future<void> signOut() => _client.auth.signOut();
 
+  @override
+  Future<void> deleteAccount() async {
+    await _client.rpc('delete_account');
+    await _client.auth.signOut();
+  }
+
   void _startContinuousSync() {
     _statusController.add(SyncStatus.connecting);
     // Sync now, then poll as a fallback and subscribe for pushes.

@@ -393,6 +393,12 @@ class PowerSyncSyncService implements SyncService {
   Future<void> signOut() => _client.auth.signOut();
 
   @override
+  Future<void> deleteAccount() async {
+    await _client.rpc('delete_account');
+    await _client.auth.signOut();
+  }
+
+  @override
   Future<void> dispose() async {
     _stop();
     await _authSub?.cancel();
