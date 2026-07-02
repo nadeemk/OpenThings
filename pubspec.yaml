@@ -41,7 +41,9 @@ dependencies:
   flutter_timezone: ^4.1.1
   flutter_markdown_plus: ^1.0.3
   device_calendar: ^4.3.3
-  home_widget: ^0.8.0
+  # 0.8.x pulls androidx.glance alpha requiring AGP 9.1; 0.7.x covers our
+  # RemoteViews-based widget.
+  home_widget: ^0.7.0
   hotkey_manager: ^0.2.3
   window_manager: ^0.4.3
 
