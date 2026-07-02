@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "openthings-web",
+      "runtimeExecutable": "/opt/homebrew/bin/flutter",
+      "runtimeArgs": ["run", "-d", "web-server", "--web-port", "8321"],
+      "port": 8321
+    }
+  ]
+}

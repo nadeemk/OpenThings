@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/theme/tokens.dart';
+import '../features/project/project_screen.dart';
 import 'built_in_lists.dart';
+import 'providers.dart';
 
 /// Breakpoint above which we show the persistent sidebar instead of
 /// bottom navigation.
@@ -37,7 +40,7 @@ class _WideShell extends StatelessWidget {
             width: 240,
             child: ColoredBox(
               color: isDark ? OtColors.darkSidebar : OtColors.lightSidebar,
-              child: const _Sidebar(),
+              child: const Sidebar(),
             ),
           ),
           const VerticalDivider(),
@@ -56,7 +59,6 @@ class _NarrowShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
-    // Primary tabs on phones; the rest are reachable from the browse tab.
     const tabs = [
       BuiltInList.inbox,
       BuiltInList.today,
@@ -65,6 +67,7 @@ class _NarrowShell extends StatelessWidget {
     ];
     final index = tabs.indexWhere((l) => location.startsWith(l.route));
     return Scaffold(
+      drawer: const Drawer(child: SafeArea(child: Sidebar())),
       body: child,
       bottomNavigationBar: NavigationBar(
         selectedIndex: index < 0 ? 1 : index,
@@ -81,35 +84,192 @@ class _NarrowShell extends StatelessWidget {
   }
 }
 
-class _Sidebar extends StatelessWidget {
-  const _Sidebar();
+class Sidebar extends ConsumerWidget {
+  const Sidebar({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.path;
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: OtSpacing.lg),
+    final areas = ref.watch(areasProvider).value ?? [];
+    final projects = ref.watch(projectsProvider).value ?? [];
+    final inboxCount = ref.watch(inboxCountProvider).value ?? 0;
+    final todayCount = ref.watch(todayCountProvider).value ?? 0;
+
+    int? countFor(BuiltInList list) => switch (list) {
+          BuiltInList.inbox => inboxCount == 0 ? null : inboxCount,
+          BuiltInList.today => todayCount == 0 ? null : todayCount,
+          _ => null,
+        };
+
+    final looseProjects =
+        projects.where((p) => p.areaId == null).toList();
+
+    return Column(
       children: [
-        for (final list in BuiltInList.values) ...[
-          _SidebarTile(
-            list: list,
-            selected: location.startsWith(list.route),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: OtSpacing.lg),
+            children: [
+              for (final list in BuiltInList.values) ...[
+                _SidebarTile(
+                  icon: list.icon,
+                  iconColor: list.color,
+                  label: list.title,
+                  count: countFor(list),
+                  selected: location == list.route,
+                  onTap: () => context.go(list.route),
+                ),
+                if (list == BuiltInList.inbox ||
+                    list == BuiltInList.someday)
+                  const SizedBox(height: OtSpacing.lg),
+              ],
+              const SizedBox(height: OtSpacing.lg),
+              // ---- Projects without an area ----
+              for (final project in looseProjects)
+                _SidebarTile(
+                  icon: Icons.donut_large_rounded,
+                  iconColor: OtColors.accent,
+                  label: project.title.isEmpty ? 'New Project' : project.title,
+                  selected: location == '/project/${project.id}',
+                  onTap: () => context.go('/project/${project.id}'),
+                ),
+              // ---- Areas with their projects ----
+              for (final area in areas) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                      OtSpacing.lg, OtSpacing.lg, OtSpacing.lg, OtSpacing.xs),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.tag_rounded,
+                          size: 14, color: OtColors.anytimeTeal),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          area.title.toUpperCase(),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                for (final project
+                    in projects.where((p) => p.areaId == area.id))
+                  _SidebarTile(
+                    icon: Icons.donut_large_rounded,
+                    iconColor: OtColors.accent,
+                    label:
+                        project.title.isEmpty ? 'New Project' : project.title,
+                    selected: location == '/project/${project.id}',
+                    onTap: () => context.go('/project/${project.id}'),
+                  ),
+              ],
+            ],
           ),
-          // Things visually groups: Inbox | dates | library.
-          if (list == BuiltInList.inbox || list == BuiltInList.someday)
-            const SizedBox(height: OtSpacing.lg),
-        ],
-        // Areas and projects will be listed here (Phase 3).
+        ),
+        const Divider(),
+        // ---- New list button ----
+        Padding(
+          padding: const EdgeInsets.all(OtSpacing.sm),
+          child: Row(
+            children: [
+              TextButton.icon(
+                onPressed: () => _showNewListMenu(context, ref),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('New List'),
+              ),
+            ],
+          ),
+        ),
       ],
     );
+  }
+
+  void _showNewListMenu(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading:
+                  const Icon(Icons.donut_large_rounded, color: OtColors.accent),
+              title: const Text('New Project'),
+              subtitle: const Text('Define a goal, then work toward it'),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                final project =
+                    await ref.read(taskRepositoryProvider).createProject();
+                if (context.mounted) context.go('/project/${project.id}');
+              },
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.tag_rounded, color: OtColors.anytimeTeal),
+              title: const Text('New Area'),
+              subtitle: const Text('Group projects by sphere of life'),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                await _promptNewArea(context, ref);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _promptNewArea(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController();
+    final title = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('New Area'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'e.g. Work, Family'),
+          onSubmitted: (v) => Navigator.pop(dialogContext, v),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, controller.text),
+              child: const Text('Create')),
+        ],
+      ),
+    );
+    if (title != null && title.trim().isNotEmpty) {
+      await ref.read(areaRepositoryProvider).create(title.trim());
+    }
   }
 }
 
 class _SidebarTile extends StatelessWidget {
-  const _SidebarTile({required this.list, required this.selected});
+  const _SidebarTile({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.count,
+  });
 
-  final BuiltInList list;
+  final IconData icon;
+  final Color iconColor;
+  final String label;
   final bool selected;
+  final VoidCallback onTap;
+  final int? count;
 
   @override
   Widget build(BuildContext context) {
@@ -123,10 +283,19 @@ class _SidebarTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(OtRadii.sm)),
         selected: selected,
         selectedTileColor: theme.colorScheme.primary.withValues(alpha: 0.12),
-        leading: Icon(list.icon, color: list.color, size: 20),
-        title: Text(list.title, style: theme.textTheme.bodyLarge),
-        onTap: () => context.go(list.route),
+        leading: Icon(icon, color: iconColor, size: 20),
+        title: Text(label,
+            style: theme.textTheme.bodyLarge,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis),
+        trailing: count == null
+            ? null
+            : Text('$count', style: theme.textTheme.bodyMedium),
+        onTap: onTap,
       ),
     );
   }
 }
+
+/// Route helper used by the router for project pages.
+Widget projectPage(String id) => ProjectScreen(projectId: id);

@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/lists/screens.dart';
+import '../features/project/project_screen.dart';
 import 'built_in_lists.dart';
 import 'shell.dart';
 
@@ -10,46 +11,45 @@ final router = GoRouter(
     ShellRoute(
       builder: (context, state, child) => AppShell(child: child),
       routes: [
-        for (final list in BuiltInList.values)
-          GoRoute(
-            path: list.route,
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: _ListPlaceholder(list: list),
-            ),
+        GoRoute(
+          path: BuiltInList.inbox.route,
+          pageBuilder: (c, s) => const NoTransitionPage(child: InboxScreen()),
+        ),
+        GoRoute(
+          path: BuiltInList.today.route,
+          pageBuilder: (c, s) => const NoTransitionPage(child: TodayScreen()),
+        ),
+        GoRoute(
+          path: BuiltInList.upcoming.route,
+          pageBuilder: (c, s) =>
+              const NoTransitionPage(child: UpcomingScreen()),
+        ),
+        GoRoute(
+          path: BuiltInList.anytime.route,
+          pageBuilder: (c, s) =>
+              const NoTransitionPage(child: AnytimeScreen()),
+        ),
+        GoRoute(
+          path: BuiltInList.someday.route,
+          pageBuilder: (c, s) =>
+              const NoTransitionPage(child: SomedayScreen()),
+        ),
+        GoRoute(
+          path: BuiltInList.logbook.route,
+          pageBuilder: (c, s) =>
+              const NoTransitionPage(child: LogbookScreen()),
+        ),
+        GoRoute(
+          path: BuiltInList.trash.route,
+          pageBuilder: (c, s) => const NoTransitionPage(child: TrashScreen()),
+        ),
+        GoRoute(
+          path: '/project/:id',
+          pageBuilder: (c, s) => NoTransitionPage(
+            child: ProjectScreen(projectId: s.pathParameters['id']!),
           ),
+        ),
       ],
     ),
   ],
 );
-
-/// Placeholder list screen; replaced by real list views in Phase 3.
-class _ListPlaceholder extends StatelessWidget {
-  const _ListPlaceholder({required this.list});
-
-  final BuiltInList list;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(list.icon, color: list.color, size: 28),
-              const SizedBox(width: 10),
-              Text(list.title, style: theme.textTheme.headlineMedium),
-            ],
-          ),
-          const Spacer(),
-          Center(
-            child: Text('No items yet', style: theme.textTheme.bodyMedium),
-          ),
-          const Spacer(),
-        ],
-      ),
-    );
-  }
-}
