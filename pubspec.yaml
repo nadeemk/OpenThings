@@ -33,6 +33,7 @@ dependencies:
 
   # Sync backend (optional at runtime; enabled via --dart-define)
   supabase_flutter: ^2.10.3
+  powersync: ^1.18.0
 
   # Integrations
   flutter_local_notifications: ^19.4.2

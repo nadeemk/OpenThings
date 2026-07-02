@@ -12,6 +12,7 @@ import '../integrations/calendar_service.dart';
 import '../integrations/notification_service.dart';
 import '../integrations/share_intent_service.dart';
 import '../integrations/today_widget_service.dart';
+import '../sync/powersync_sync_service.dart';
 import '../sync/supabase_sync_service.dart';
 import '../sync/sync_config.dart';
 import '../sync/sync_service.dart';
@@ -116,10 +117,19 @@ final expandedTaskIdProvider =
 
 // ---- Sync -------------------------------------------------------------------
 
-/// The sync backend. NoopSyncService unless SUPABASE_URL /
-/// SUPABASE_ANON_KEY are provided at build time (see SyncConfig).
+/// The sync backend, chosen by build-time config (see SyncConfig):
+/// - POWERSYNC_URL + Supabase keys -> PowerSync transport
+/// - Supabase keys only            -> direct Supabase engine
+/// - neither                       -> NoopSyncService (fully local)
 final syncServiceProvider = Provider<SyncService>((ref) {
   if (!SyncConfig.enabled) return NoopSyncService();
+  if (SyncConfig.usePowerSync) {
+    final service =
+        PowerSyncSyncService(ref.watch(databaseProvider), supabaseClient());
+    service.init();
+    ref.onDispose(service.dispose);
+    return service;
+  }
   final service = SupabaseSyncService(
     ref.watch(databaseProvider),
     supabaseClient(),

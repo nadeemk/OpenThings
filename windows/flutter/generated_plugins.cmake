@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   flutter_timezone
   hotkey_manager_windows
+  powersync_flutter_libs
   screen_retriever_windows
   sqlite3_flutter_libs
   url_launcher_windows
