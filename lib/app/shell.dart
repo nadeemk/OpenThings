@@ -15,13 +15,15 @@ const _kSidebarBreakpoint = 700.0;
 
 /// Adaptive navigation shell: persistent sidebar on desktop/web/tablet,
 /// bottom navigation + drawer on phones.
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Arm the reminder scheduler for the app's lifetime.
+    ref.watch(notificationServiceProvider);
     final wide = MediaQuery.sizeOf(context).width >= _kSidebarBreakpoint;
     return AppShortcuts(
       child: wide ? _WideShell(child: child) : _NarrowShell(child: child),

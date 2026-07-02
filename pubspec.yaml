@@ -34,6 +34,13 @@ dependencies:
   # Sync backend (optional at runtime; enabled via --dart-define)
   supabase_flutter: ^2.10.3
 
+  # Integrations
+  flutter_local_notifications: ^19.4.2
+  timezone: ^0.10.1
+  flutter_timezone: ^4.1.1
+  flutter_markdown_plus: ^1.0.3
+  device_calendar: ^3.9.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

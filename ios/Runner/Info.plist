@@ -66,5 +66,21 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.openthings.deeplink</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>things</string>
+				<string>openthings</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSCalendarsUsageDescription</key>
+	<string>OpenThings shows your calendar events alongside your to-dos in Today and Upcoming.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>OpenThings shows your calendar events alongside your to-dos in Today and Upcoming.</string>
 </dict>
 </plist>

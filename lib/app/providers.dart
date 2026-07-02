@@ -7,6 +7,9 @@ import '../data/repositories/area_repository.dart';
 import '../data/repositories/checklist_repository.dart';
 import '../data/repositories/tag_repository.dart';
 import '../data/repositories/task_repository.dart';
+import '../domain/dates.dart' as d;
+import '../integrations/calendar_service.dart';
+import '../integrations/notification_service.dart';
 import '../sync/supabase_sync_service.dart';
 import '../sync/sync_config.dart';
 import '../sync/sync_service.dart';
@@ -125,3 +128,25 @@ final syncServiceProvider = Provider<SyncService>((ref) {
 
 final syncStatusProvider = StreamProvider<SyncStatus>(
     (ref) => ref.watch(syncServiceProvider).status);
+
+// ---- Integrations -----------------------------------------------------------
+
+/// Reminder notifications. Reading this provider once (in the shell)
+/// arms the scheduler for the app's lifetime.
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  final service = NotificationService(ref.watch(databaseProvider));
+  service.init();
+  ref.onDispose(service.dispose);
+  return service;
+});
+
+final calendarServiceProvider =
+    Provider<CalendarService>((ref) => CalendarService());
+
+/// Today's calendar events, mirrored read-only at the top of Today.
+final todayEventsProvider = FutureProvider<List<MirroredEvent>>((ref) {
+  final t = d.today();
+  return ref
+      .watch(calendarServiceProvider)
+      .eventsBetween(t, t.add(const Duration(days: 1)));
+});

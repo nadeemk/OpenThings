@@ -51,16 +51,33 @@ class TodayScreen extends ConsumerWidget {
     const list = BuiltInList.today;
     final day = view?.day ?? [];
     final evening = view?.evening ?? [];
+    final events = ref.watch(todayEventsProvider).value ?? const [];
     return ListScaffold(
       title: list.title,
       icon: list.icon,
       color: list.color,
-      isEmpty: day.isEmpty && evening.isEmpty,
+      isEmpty: day.isEmpty && evening.isEmpty && events.isEmpty,
       emptyHint: 'Take a moment to plan your day.',
       onAdd: (ref) => quickCreate(ref,
           create: () => ref.read(taskRepositoryProvider).createTodo(
               startBucket: StartBucket.anytime, startDate: d.today())),
       slivers: [
+        // Read-only calendar events, pinned at the top like Things.
+        if (events.isNotEmpty)
+          SliverTodoList(children: [
+            for (final e in events)
+              ListTile(
+                dense: true,
+                leading: const Icon(Icons.calendar_today_rounded,
+                    size: 14, color: OtColors.upcomingRed),
+                title: Text(e.title),
+                trailing: e.start == null
+                    ? null
+                    : Text(DateFormat.jm().format(e.start!),
+                        style: Theme.of(context).textTheme.bodyMedium),
+              ),
+            const Divider(),
+          ]),
         SliverTodoList(children: [for (final t in day) TodoRow(task: t)]),
         if (evening.isNotEmpty)
           const SliverPadding(

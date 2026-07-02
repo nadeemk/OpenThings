@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
@@ -74,8 +75,7 @@ class ProjectScreen extends ConsumerWidget {
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: OtSpacing.xl),
               sliver: SliverToBoxAdapter(
-                child:
-                    Text(project.notes, style: theme.textTheme.bodyMedium),
+                child: MarkdownBody(data: project.notes),
               ),
             ),
           SliverTodoList(children: [

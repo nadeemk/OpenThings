@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -26,6 +27,7 @@ class _TodoEditorState extends ConsumerState<TodoEditor> {
   final _notesController = TextEditingController();
   final _checklistController = TextEditingController();
   bool _seeded = false;
+  bool _previewNotes = false;
 
   @override
   void dispose() {
@@ -105,17 +107,46 @@ class _TodoEditorState extends ConsumerState<TodoEditor> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextField(
-                    controller: _notesController,
-                    maxLines: null,
-                    style: theme.textTheme.bodyLarge?.copyWith(fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Notes',
-                      hintStyle: theme.textTheme.bodyMedium,
-                      border: InputBorder.none,
-                      isDense: true,
-                    ),
-                    onChanged: (v) => repo.updateNotes(task.id, v),
+                  // ---- Notes (Markdown, with preview toggle) ----
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _previewNotes
+                            ? Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 6),
+                                child: MarkdownBody(
+                                    data: _notesController.text.isEmpty
+                                        ? '_No notes_'
+                                        : _notesController.text),
+                              )
+                            : TextField(
+                                controller: _notesController,
+                                maxLines: null,
+                                style: theme.textTheme.bodyLarge
+                                    ?.copyWith(fontSize: 13),
+                                decoration: InputDecoration(
+                                  hintText: 'Notes (Markdown supported)',
+                                  hintStyle: theme.textTheme.bodyMedium,
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                onChanged: (v) =>
+                                    repo.updateNotes(task.id, v),
+                              ),
+                      ),
+                      IconButton(
+                        tooltip:
+                            _previewNotes ? 'Edit notes' : 'Preview Markdown',
+                        iconSize: 14,
+                        icon: Icon(_previewNotes
+                            ? Icons.edit_rounded
+                            : Icons.visibility_rounded),
+                        onPressed: () =>
+                            setState(() => _previewNotes = !_previewNotes),
+                      ),
+                    ],
                   ),
                   // ---- Checklist ----
                   for (final item in checklist)
