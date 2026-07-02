@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../core/theme/tokens.dart';
 import '../../data/db/enums.dart';
+import '../../domain/reorder.dart';
 import '../lists/list_scaffold.dart';
 import '../lists/magic_plus.dart';
 import '../lists/selection.dart';
@@ -78,16 +79,43 @@ class ProjectScreen extends ConsumerWidget {
                 child: MarkdownBody(data: project.notes),
               ),
             ),
-          SliverTodoList(children: [
-            for (final t in looseTodos)
-              MagicPlusDropTarget(
-                before: t,
-                onInsert: (orderIndex) => quickCreate(ref,
-                    create: () => ref.read(taskRepositoryProvider).createTodo(
-                        projectId: projectId, orderIndex: orderIndex)),
-                child: TodoRow(task: t),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: OtSpacing.lg),
+            sliver: SliverReorderableList(
+              itemCount: looseTodos.length,
+              onReorderItem: (oldIndex, newIndex) {
+                final idx = reorderedIndex(
+                    [for (final t in looseTodos) t.orderIndex],
+                    oldIndex,
+                    newIndex);
+                ref
+                    .read(taskRepositoryProvider)
+                    .setOrderIndex(looseTodos[oldIndex].id, idx);
+              },
+              itemBuilder: (context, i) =>
+                  ReorderableDelayedDragStartListener(
+                key: ValueKey('proj-${looseTodos[i].id}'),
+                index: i,
+                child: MagicPlusDropTarget(
+                  before: looseTodos[i],
+                  onInsert: (orderIndex) => quickCreate(ref,
+                      create: () => ref
+                          .read(taskRepositoryProvider)
+                          .createTodo(
+                              projectId: projectId, orderIndex: orderIndex)),
+                  child: TodoRow(task: looseTodos[i]),
+                ),
               ),
-          ]),
+            ),
+          ),
+          // Drop the Magic Plus here to create a new Heading.
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: OtSpacing.lg, vertical: OtSpacing.sm),
+            sliver: SliverToBoxAdapter(
+              child: _HeadingDropZone(projectId: projectId),
+            ),
+          ),
           for (final heading in headings) ...[
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: OtSpacing.lg),
@@ -103,6 +131,76 @@ class ProjectScreen extends ConsumerWidget {
           ],
           const SliverPadding(padding: EdgeInsets.only(bottom: 96)),
         ],
+      ),
+    );
+  }
+}
+
+/// Drop zone: dropping the Magic Plus here creates a Heading, mirroring
+/// Things' drag-to-left-edge gesture.
+class _HeadingDropZone extends ConsumerStatefulWidget {
+  const _HeadingDropZone({required this.projectId});
+
+  final String projectId;
+
+  @override
+  ConsumerState<_HeadingDropZone> createState() => _HeadingDropZoneState();
+}
+
+class _HeadingDropZoneState extends ConsumerState<_HeadingDropZone> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DragTarget<MagicPlusPayload>(
+      onWillAcceptWithDetails: (_) {
+        setState(() => _hovering = true);
+        return true;
+      },
+      onLeave: (_) => setState(() => _hovering = false),
+      onAcceptWithDetails: (_) async {
+        setState(() => _hovering = false);
+        final controller = TextEditingController();
+        final title = await showDialog<String>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('New Heading'),
+            content: TextField(
+              controller: controller,
+              autofocus: true,
+              onSubmitted: (v) => Navigator.pop(dialogContext, v),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel')),
+              FilledButton(
+                  onPressed: () =>
+                      Navigator.pop(dialogContext, controller.text),
+                  child: const Text('Add')),
+            ],
+          ),
+        );
+        if (title != null && title.trim().isNotEmpty) {
+          await ref.read(taskRepositoryProvider).createHeading(
+              projectId: widget.projectId, title: title.trim());
+        }
+      },
+      builder: (context, candidates, rejected) => AnimatedOpacity(
+        duration: const Duration(milliseconds: 120),
+        opacity: _hovering ? 1 : 0.35,
+        child: Container(
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+            borderRadius: BorderRadius.circular(OtRadii.sm),
+          ),
+          child: Text('Drop + here for a new heading',
+              style: theme.textTheme.bodyMedium),
+        ),
       ),
     );
   }

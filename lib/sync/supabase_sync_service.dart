@@ -64,6 +64,14 @@ class SupabaseSyncService implements SyncService {
       _client.auth.signUp(email: email, password: password);
 
   @override
+  Future<void> signInWithOAuth(String provider) =>
+      _client.auth.signInWithOAuth(switch (provider) {
+        'apple' => OAuthProvider.apple,
+        'google' => OAuthProvider.google,
+        _ => throw ArgumentError.value(provider, 'provider'),
+      });
+
+  @override
   Future<void> signOut() => _client.auth.signOut();
 
   void _startContinuousSync() {

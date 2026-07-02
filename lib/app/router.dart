@@ -5,6 +5,7 @@ import '../data/db/enums.dart';
 import '../domain/natural_date_parser.dart';
 import '../features/lists/screens.dart';
 import '../features/project/project_screen.dart';
+import '../features/tags/tag_screen.dart';
 import 'built_in_lists.dart';
 import 'providers.dart';
 import 'shell.dart';
@@ -80,6 +81,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/project/:id',
             pageBuilder: (c, s) => NoTransitionPage(
               child: ProjectScreen(projectId: s.pathParameters['id']!),
+            ),
+          ),
+          GoRoute(
+            path: '/tag/:id',
+            pageBuilder: (c, s) => NoTransitionPage(
+              child: TagScreen(tagId: s.pathParameters['id']!),
             ),
           ),
         ],

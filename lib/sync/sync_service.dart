@@ -18,6 +18,9 @@ abstract interface class SyncService {
 
   Future<void> signUp({required String email, required String password});
 
+  /// OAuth sign-in; [provider] is 'apple' or 'google'.
+  Future<void> signInWithOAuth(String provider);
+
   Future<void> signOut();
 
   /// Whether a user session exists.
@@ -45,6 +48,10 @@ class NoopSyncService implements SyncService {
 
   @override
   Future<void> signUp({required String email, required String password}) =>
+      throw UnsupportedError('Sync is not configured in this build');
+
+  @override
+  Future<void> signInWithOAuth(String provider) =>
       throw UnsupportedError('Sync is not configured in this build');
 
   @override

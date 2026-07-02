@@ -5,8 +5,11 @@ import 'package:intl/intl.dart';
 import '../../app/built_in_lists.dart';
 import '../../app/providers.dart';
 import '../../core/theme/tokens.dart';
+import '../../data/db/database.dart';
 import '../../data/db/enums.dart';
+import '../../data/list_queries.dart';
 import '../../domain/dates.dart' as d;
+import '../../domain/reorder.dart';
 import 'list_scaffold.dart';
 import 'magic_plus.dart';
 import 'todo_row.dart';
@@ -26,17 +29,33 @@ class InboxScreen extends ConsumerWidget {
       emptyHint: 'Collect your thoughts — new to-dos land here.',
       onAdd: (ref) => quickCreate(ref),
       slivers: [
-        SliverTodoList(children: [
-          for (final t in items)
-            MagicPlusDropTarget(
-              before: t,
-              onInsert: (orderIndex) => quickCreate(ref,
-                  create: () => ref
-                      .read(taskRepositoryProvider)
-                      .createTodo(orderIndex: orderIndex)),
-              child: TodoRow(task: t),
+        // Drag rows to reorder; drop the Magic Plus between rows to
+        // insert.
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: OtSpacing.lg),
+          sliver: SliverReorderableList(
+            itemCount: items.length,
+            onReorderItem: (oldIndex, newIndex) {
+              final idx = reorderedIndex(
+                  [for (final t in items) t.orderIndex], oldIndex, newIndex);
+              ref
+                  .read(taskRepositoryProvider)
+                  .setOrderIndex(items[oldIndex].id, idx);
+            },
+            itemBuilder: (context, i) => ReorderableDelayedDragStartListener(
+              key: ValueKey('inbox-${items[i].id}'),
+              index: i,
+              child: MagicPlusDropTarget(
+                before: items[i],
+                onInsert: (orderIndex) => quickCreate(ref,
+                    create: () => ref
+                        .read(taskRepositoryProvider)
+                        .createTodo(orderIndex: orderIndex)),
+                child: TodoRow(task: items[i]),
+              ),
             ),
-        ]),
+          ),
+        ),
       ],
     );
   }
@@ -116,24 +135,51 @@ class UpcomingScreen extends ConsumerWidget {
               startBucket: StartBucket.anytime,
               startDate: today.add(const Duration(days: 1)))),
       slivers: [
-        for (final group in groups) ...[
+        // Things-style grouping: each of the next 7 days individually,
+        // then one section per month.
+        for (final section in _sectioned(groups, today)) ...[
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: OtSpacing.lg),
             sliver: SliverToBoxAdapter(
-              child: ListSectionHeader(label: _dayLabel(group.day, today)),
+              child: ListSectionHeader(label: section.label),
             ),
           ),
-          SliverTodoList(children: [for (final t in group.items) TodoRow(task: t)]),
+          SliverTodoList(children: [
+            for (final t in section.items)
+              TodoRow(task: t, showWhenBadge: section.showDates),
+          ]),
         ],
       ],
     );
   }
 
+  List<({String label, List<Task> items, bool showDates})> _sectioned(
+      UpcomingView groups, DateTime today) {
+    final sections = <({String label, List<Task> items, bool showDates})>[];
+    final monthBuckets = <String, List<Task>>{};
+    for (final group in groups) {
+      final diff = group.day.difference(today).inDays;
+      if (diff < 7) {
+        sections.add((
+          label: _dayLabel(group.day, today),
+          items: group.items,
+          showDates: false,
+        ));
+      } else {
+        final key = DateFormat.yMMMM().format(group.day);
+        monthBuckets.putIfAbsent(key, () => []).addAll(group.items);
+      }
+    }
+    for (final entry in monthBuckets.entries) {
+      sections.add((label: entry.key, items: entry.value, showDates: true));
+    }
+    return sections;
+  }
+
   String _dayLabel(DateTime day, DateTime today) {
     final diff = day.difference(today).inDays;
     if (diff == 1) return 'Tomorrow';
-    if (diff < 7) return DateFormat.EEEE().format(day);
-    return DateFormat.yMMMd().format(day);
+    return DateFormat.EEEE().format(day);
   }
 }
 

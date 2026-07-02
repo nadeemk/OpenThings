@@ -9,6 +9,7 @@ import '../../data/db/enums.dart';
 import '../../domain/dates.dart' as d;
 import '../quick_entry/quick_entry.dart';
 import '../quick_find/quick_find.dart';
+import '../tags/tag_picker.dart';
 
 /// The app-wide keyboard map, Things-style:
 ///
@@ -104,6 +105,10 @@ class AppShortcuts extends ConsumerWidget {
         cmd(LogicalKeyboardKey.keyO): () => withExpanded((id) => ref
             .read(taskRepositoryProvider)
             .setWhen(id, bucket: StartBucket.someday)),
+        cmd(LogicalKeyboardKey.keyT, shift: true): () =>
+            withExpanded((id) async {
+              await showTagPicker(context, ref, id);
+            }),
         cmd(LogicalKeyboardKey.period): () => withExpanded((id) async {
               ref.read(expandedTaskIdProvider.notifier).set(null);
               await ref.read(taskRepositoryProvider).complete(id);

@@ -211,6 +211,26 @@ class _SyncSheetState extends ConsumerState<_SyncSheet> {
               ),
             ],
           ),
+          const SizedBox(height: OtSpacing.md),
+          Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () => _run(() => sync.signInWithOAuth('apple')),
+                icon: const Icon(Icons.apple_rounded, size: 16),
+                label: const Text('Apple'),
+              ),
+              const SizedBox(width: OtSpacing.md),
+              OutlinedButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () => _run(() => sync.signInWithOAuth('google')),
+                icon: const Icon(Icons.g_mobiledata_rounded, size: 18),
+                label: const Text('Google'),
+              ),
+            ],
+          ),
         ],
       ),
     );

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/theme/tokens.dart';
+import '../features/lists/magic_plus.dart';
 import '../features/project/project_screen.dart';
 import '../features/shortcuts/app_shortcuts.dart';
 import '../features/sync/sync_sheet.dart';
@@ -117,14 +118,38 @@ class Sidebar extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: OtSpacing.lg),
             children: [
               for (final list in BuiltInList.values) ...[
-                _SidebarTile(
-                  icon: list.icon,
-                  iconColor: list.color,
-                  label: list.title,
-                  count: countFor(list),
-                  selected: location == list.route,
-                  onTap: () => context.go(list.route),
-                ),
+                if (list == BuiltInList.inbox)
+                  // Dropping the Magic Plus on Inbox captures a to-do
+                  // there, like Things.
+                  DragTarget<MagicPlusPayload>(
+                    onAcceptWithDetails: (_) async {
+                      final task = await ref
+                          .read(taskRepositoryProvider)
+                          .createTodo();
+                      ref
+                          .read(expandedTaskIdProvider.notifier)
+                          .set(task.id);
+                      if (context.mounted) context.go(list.route);
+                    },
+                    builder: (context, candidates, rejected) => _SidebarTile(
+                      icon: list.icon,
+                      iconColor: list.color,
+                      label: list.title,
+                      count: countFor(list),
+                      selected: location == list.route ||
+                          candidates.isNotEmpty,
+                      onTap: () => context.go(list.route),
+                    ),
+                  )
+                else
+                  _SidebarTile(
+                    icon: list.icon,
+                    iconColor: list.color,
+                    label: list.title,
+                    count: countFor(list),
+                    selected: location == list.route,
+                    onTap: () => context.go(list.route),
+                  ),
                 if (list == BuiltInList.inbox ||
                     list == BuiltInList.someday)
                   const SizedBox(height: OtSpacing.lg),

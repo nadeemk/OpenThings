@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/providers.dart';
 import '../../core/theme/tokens.dart';
 import '../../data/db/database.dart';
+import '../../data/db/enums.dart';
 import '../../domain/dates.dart' as d;
 import '../editor/todo_editor.dart';
 import 'selection.dart';
@@ -12,8 +14,9 @@ import 'todo_checkbox.dart';
 
 /// One to-do in a list. Tapping the row expands it inline into the
 /// editor card (Things' signature interaction); tapping the checkbox
-/// completes it after a short grace delay.
-class TodoRow extends ConsumerWidget {
+/// completes it after a short grace delay. On desktop/web, hovering
+/// reveals quick actions (schedule Today, trash).
+class TodoRow extends ConsumerStatefulWidget {
   const TodoRow({
     super.key,
     required this.task,
@@ -31,7 +34,18 @@ class TodoRow extends ConsumerWidget {
   final bool showWhenBadge;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TodoRow> createState() => _TodoRowState();
+}
+
+class _TodoRowState extends ConsumerState<TodoRow> {
+  bool _hovering = false;
+
+  Task get task => widget.task;
+  bool get showTodayStar => widget.showTodayStar;
+  bool get showWhenBadge => widget.showWhenBadge;
+
+  @override
+  Widget build(BuildContext context) {
     final expandedId = ref.watch(expandedTaskIdProvider);
     if (expandedId == task.id) {
       return TodoEditor(taskId: task.id);
@@ -124,10 +138,34 @@ class TodoRow extends ConsumerWidget {
                 padding: const EdgeInsets.only(top: 7, left: OtSpacing.sm),
                 child: _DeadlineFlag(deadline: task.deadline!),
               ),
+            // Hover quick actions (desktop/web).
+            if (_hovering && !selecting) ...[
+              _HoverAction(
+                icon: Icons.star_rounded,
+                color: OtColors.todayYellow,
+                tooltip: 'Move to Today',
+                onTap: () => ref.read(taskRepositoryProvider).setWhen(
+                    task.id,
+                    bucket: StartBucket.anytime,
+                    startDate: d.today()),
+              ),
+              _HoverAction(
+                icon: Icons.delete_outline_rounded,
+                color: theme.textTheme.bodyMedium?.color ?? Colors.grey,
+                tooltip: 'Move to Trash',
+                onTap: () => ref.read(taskRepositoryProvider).trash(task.id),
+              ),
+            ],
           ],
         ),
         ),
       ),
+    );
+
+    final hoverRow = MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: row,
     );
 
     // Swipe actions (touch): right = complete, left = trash.
@@ -159,7 +197,32 @@ class TodoRow extends ConsumerWidget {
         // remove it from the tree itself.
         return false;
       },
-      child: row,
+      child: hoverRow,
+    );
+  }
+}
+
+class _HoverAction extends StatelessWidget {
+  const _HoverAction({
+    required this.icon,
+    required this.color,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      visualDensity: VisualDensity.compact,
+      iconSize: 16,
+      icon: Icon(icon, color: color),
+      onPressed: onTap,
     );
   }
 }
@@ -196,16 +259,19 @@ class _MetaRow extends StatelessWidget {
         Text(DateFormat.MMMd().format(task.startDate!),
             style: theme.textTheme.bodyMedium?.copyWith(fontSize: 11)),
       for (final tag in tags)
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-                color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+        GestureDetector(
+          onTap: () => context.go('/tag/${tag.id}'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+            ),
+            child: Text(tag.title,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 10, color: theme.colorScheme.primary)),
           ),
-          child: Text(tag.title,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(fontSize: 10, color: theme.colorScheme.primary)),
         ),
     ];
     if (children.isEmpty) return const SizedBox.shrink();

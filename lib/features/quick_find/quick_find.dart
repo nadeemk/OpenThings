@@ -83,7 +83,7 @@ class _QuickFindPanelState extends ConsumerState<_QuickFindPanel> {
             color: OtColors.somedaySand,
             title: tag.title,
             subtitle: 'Tag',
-            onTap: (context) => context.go(BuiltInList.anytime.route),
+            onTap: (context) => context.go('/tag/${tag.id}'),
           ));
         }
       }

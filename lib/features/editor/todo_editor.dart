@@ -8,6 +8,7 @@ import '../../core/theme/tokens.dart';
 import '../../data/db/enums.dart';
 import '../../domain/dates.dart' as d;
 import '../lists/todo_checkbox.dart';
+import '../tags/tag_picker.dart';
 import 'when_picker.dart';
 
 /// The inline-expanded editing card: a to-do opens in place into a
@@ -236,6 +237,19 @@ class _TodoEditorState extends ConsumerState<TodoEditor> {
                           );
                           await repo.setDeadline(task.id, picked);
                         },
+                      ),
+                      _DateChip(
+                        icon: Icons.sell_rounded,
+                        color: OtColors.somedaySand,
+                        label: (ref.watch(taskTagsProvider(task.id)).value ??
+                                    const [])
+                                .isEmpty
+                            ? 'Tags'
+                            : (ref.watch(taskTagsProvider(task.id)).value ??
+                                    const [])
+                                .map((t) => t.title)
+                                .join(', '),
+                        onTap: () => showTagPicker(context, ref, task.id),
                       ),
                       _DateChip(
                         icon: Icons.access_time_rounded,
