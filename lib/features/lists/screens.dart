@@ -8,6 +8,7 @@ import '../../core/theme/tokens.dart';
 import '../../data/db/enums.dart';
 import '../../domain/dates.dart' as d;
 import 'list_scaffold.dart';
+import 'magic_plus.dart';
 import 'todo_row.dart';
 
 class InboxScreen extends ConsumerWidget {
@@ -25,7 +26,17 @@ class InboxScreen extends ConsumerWidget {
       emptyHint: 'Collect your thoughts — new to-dos land here.',
       onAdd: (ref) => quickCreate(ref),
       slivers: [
-        SliverTodoList(children: [for (final t in items) TodoRow(task: t)]),
+        SliverTodoList(children: [
+          for (final t in items)
+            MagicPlusDropTarget(
+              before: t,
+              onInsert: (orderIndex) => quickCreate(ref,
+                  create: () => ref
+                      .read(taskRepositoryProvider)
+                      .createTodo(orderIndex: orderIndex)),
+              child: TodoRow(task: t),
+            ),
+        ]),
       ],
     );
   }

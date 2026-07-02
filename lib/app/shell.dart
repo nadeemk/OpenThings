@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/theme/tokens.dart';
 import '../features/project/project_screen.dart';
+import '../features/shortcuts/app_shortcuts.dart';
 import 'built_in_lists.dart';
 import 'providers.dart';
 
@@ -21,7 +22,9 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= _kSidebarBreakpoint;
-    return wide ? _WideShell(child: child) : _NarrowShell(child: child);
+    return AppShortcuts(
+      child: wide ? _WideShell(child: child) : _NarrowShell(child: child),
+    );
   }
 }
 

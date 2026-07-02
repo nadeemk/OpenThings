@@ -7,6 +7,7 @@ import '../../core/theme/tokens.dart';
 import '../../data/db/database.dart';
 import '../../domain/dates.dart' as d;
 import '../editor/todo_editor.dart';
+import 'selection.dart';
 import 'todo_checkbox.dart';
 
 /// One to-do in a list. Tapping the row expands it inline into the
@@ -40,11 +41,25 @@ class TodoRow extends ConsumerWidget {
     final checked = task.completionDate != null;
     final checklistAsync = ref.watch(checklistProvider(task.id));
     final tagsAsync = ref.watch(taskTagsProvider(task.id));
+    final selection = ref.watch(selectedTaskIdsProvider);
+    final selecting = selection.isNotEmpty;
+    final selected = selection.contains(task.id);
 
-    return InkWell(
-      onTap: () => ref.read(expandedTaskIdProvider.notifier).set(task.id),
+    final row = InkWell(
+      onTap: selecting
+          ? () => ref.read(selectedTaskIdsProvider.notifier).toggle(task.id)
+          : () => ref.read(expandedTaskIdProvider.notifier).set(task.id),
+      onLongPress: () =>
+          ref.read(selectedTaskIdsProvider.notifier).toggle(task.id),
       borderRadius: BorderRadius.circular(OtRadii.sm),
-      child: Padding(
+      child: Container(
+        decoration: selected
+            ? BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(OtRadii.sm),
+              )
+            : null,
+        child: Padding(
         padding: const EdgeInsets.symmetric(
             horizontal: OtSpacing.sm, vertical: OtSpacing.xs),
         child: Row(
@@ -111,7 +126,40 @@ class TodoRow extends ConsumerWidget {
               ),
           ],
         ),
+        ),
       ),
+    );
+
+    // Swipe actions (touch): right = complete, left = trash.
+    return Dismissible(
+      key: ValueKey('dismiss-${task.id}'),
+      direction: selecting
+          ? DismissDirection.none
+          : DismissDirection.horizontal,
+      background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: OtSpacing.lg),
+        color: theme.colorScheme.primary,
+        child: const Icon(Icons.check_rounded, color: Colors.white),
+      ),
+      secondaryBackground: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: OtSpacing.lg),
+        color: OtColors.deadlineRed,
+        child: const Icon(Icons.delete_rounded, color: Colors.white),
+      ),
+      confirmDismiss: (direction) async {
+        final repo = ref.read(taskRepositoryProvider);
+        if (direction == DismissDirection.startToEnd) {
+          await repo.complete(task.id);
+        } else {
+          await repo.trash(task.id);
+        }
+        // The reactive stream removes the row; don't let Dismissible
+        // remove it from the tree itself.
+        return false;
+      },
+      child: row,
     );
   }
 }

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../core/theme/tokens.dart';
 import '../../data/db/database.dart';
+import 'magic_plus.dart';
+import 'selection.dart';
 
 /// Shared chrome for every list screen: big colored title, scrollable
 /// body, and the floating "+" button that creates a to-do in this list.
@@ -32,15 +34,9 @@ class ListScaffold extends ConsumerWidget {
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      floatingActionButton: onAdd == null
-          ? null
-          : FloatingActionButton(
-              onPressed: () => onAdd!(ref),
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: Colors.white,
-              shape: const CircleBorder(),
-              child: const Icon(Icons.add_rounded, size: 28),
-            ),
+      floatingActionButton:
+          onAdd == null ? null : MagicPlusFab(onTap: () => onAdd!(ref)),
+      bottomNavigationBar: const BatchActionBar(),
       body: CustomScrollView(
         slivers: [
           SliverPadding(

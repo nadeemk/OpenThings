@@ -7,6 +7,8 @@ import '../../app/providers.dart';
 import '../../core/theme/tokens.dart';
 import '../../data/db/enums.dart';
 import '../lists/list_scaffold.dart';
+import '../lists/magic_plus.dart';
+import '../lists/selection.dart';
 import '../lists/todo_row.dart';
 
 class ProjectScreen extends ConsumerWidget {
@@ -36,16 +38,13 @@ class ProjectScreen extends ConsumerWidget {
     final looseTodos = open.where((t) => t.headingId == null).toList();
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => quickCreate(ref,
+      floatingActionButton: MagicPlusFab(
+        onTap: () => quickCreate(ref,
             create: () => ref
                 .read(taskRepositoryProvider)
                 .createTodo(projectId: projectId)),
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: Colors.white,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add_rounded, size: 28),
       ),
+      bottomNavigationBar: const BatchActionBar(),
       body: CustomScrollView(
         slivers: [
           SliverPadding(
@@ -79,7 +78,16 @@ class ProjectScreen extends ConsumerWidget {
                     Text(project.notes, style: theme.textTheme.bodyMedium),
               ),
             ),
-          SliverTodoList(children: [for (final t in looseTodos) TodoRow(task: t)]),
+          SliverTodoList(children: [
+            for (final t in looseTodos)
+              MagicPlusDropTarget(
+                before: t,
+                onInsert: (orderIndex) => quickCreate(ref,
+                    create: () => ref.read(taskRepositoryProvider).createTodo(
+                        projectId: projectId, orderIndex: orderIndex)),
+                child: TodoRow(task: t),
+              ),
+          ]),
           for (final heading in headings) ...[
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: OtSpacing.lg),

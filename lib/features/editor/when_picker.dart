@@ -3,23 +3,51 @@ import 'package:flutter/material.dart';
 import '../../core/theme/tokens.dart';
 import '../../data/db/enums.dart';
 import '../../domain/dates.dart' as d;
+import '../../domain/natural_date_parser.dart';
 
 /// Result of the When picker.
 typedef WhenChoice = ({StartBucket bucket, DateTime? date, bool isEvening});
 
-/// Things' "When" popover: Today / This Evening / Tomorrow / Someday /
-/// a specific date / clear.
+/// Things' "When" popover: natural-language entry ("tomorrow",
+/// "next monday", "in 4 days", "aug 1") plus Today / This Evening /
+/// Tomorrow / Someday / a specific date / clear.
 Future<WhenChoice?> showWhenPicker(BuildContext context) async {
   return showModalBottomSheet<WhenChoice>(
     context: context,
     showDragHandle: true,
+    isScrollControlled: true,
     builder: (context) {
       final today = d.today();
       void pick(WhenChoice c) => Navigator.of(context).pop(c);
+      final parser = NaturalDateParser();
       return SafeArea(
-        child: Column(
+        child: Padding(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Padding(
+              padding: EdgeInsets.only(
+                left: OtSpacing.lg,
+                right: OtSpacing.lg,
+                bottom: OtSpacing.sm,
+                top: OtSpacing.xs,
+              ),
+              child: TextField(
+                autofocus: false,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.event_rounded, size: 18),
+                  hintText: 'When? e.g. tomorrow, next monday, aug 1',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (v) {
+                  final parsed = parser.parse(v);
+                  if (parsed != null) pick(parsed);
+                },
+              ),
+            ),
             ListTile(
               leading:
                   const Icon(Icons.star_rounded, color: OtColors.todayYellow),
@@ -79,6 +107,7 @@ Future<WhenChoice?> showWhenPicker(BuildContext context) async {
                   (bucket: StartBucket.anytime, date: null, isEvening: false)),
             ),
           ],
+          ),
         ),
       );
     },
