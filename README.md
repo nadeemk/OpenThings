@@ -69,6 +69,18 @@ Sign in from the sidebar footer (email/password or Apple/Google OAuth). Sync is 
 
 **PowerSync transport** (optional): create a [PowerSync](https://powersync.com) instance connected to your Supabase Postgres and add `--dart-define=POWERSYNC_URL=https://xyz.powersync.journeyapps.com`. The `SyncService` seam selects PowerSync when configured; drift remains the app's source of truth, with the PowerSync database as the offline-first sync transport.
 
+## Production
+
+**Web** deploys automatically: every push to `main` runs tests, builds the web release, and publishes to Firebase Hosting (project `openthings-web-nk`, site https://openthings-web-nk.web.app) via `.github/workflows/deploy-web.yml`. COOP/COEP headers are set so drift uses OPFS-backed SQLite in the browser.
+
+To turn on accounts + sync in production:
+1. Create a project at [supabase.com](https://supabase.com) (free tier)
+2. SQL editor → run `supabase/migrations/0001_schema.sql`, then `0002_delete_account.sql`
+3. Add repo secrets: `gh secret set SUPABASE_URL` and `gh secret set SUPABASE_ANON_KEY` (Project Settings → API)
+4. Re-run the Deploy Web workflow — the build picks the keys up; without them the app ships local-only
+
+**iOS** (pending): enroll in the Apple Developer Program, install Xcode, then archive + TestFlight. Rebrand first — a Things-lookalike named similarly risks App Store guideline 4.1 rejection.
+
 ## iOS-only caveats
 
 Two surfaces require Xcode-managed extension targets that can't be added as plain files, so they're Android/desktop-complete but pending on iOS: the share-sheet extension (Android share-target works) and the WidgetKit widget (Android home-screen widget works). Mail-to-Things-style email capture would need a server-side inbound-email service and is out of scope.
