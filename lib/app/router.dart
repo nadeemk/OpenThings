@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../data/db/enums.dart';
 import '../domain/natural_date_parser.dart';
+import '../features/auth/auth.dart';
 import '../features/lists/screens.dart';
 import '../features/project/project_screen.dart';
 import '../features/tags/tag_screen.dart';
@@ -12,9 +13,25 @@ import 'shell.dart';
 
 /// Router as a provider so deep-link routes can reach repositories.
 final routerProvider = Provider<GoRouter>((ref) {
+  final auth = ref.watch(authNotifierProvider);
   return GoRouter(
     initialLocation: BuiltInList.today.route,
+    // Re-evaluate the auth gate whenever sign-in state changes.
+    refreshListenable: auth,
+    redirect: (context, state) {
+      // Gate only on the web (with sync configured); native stays
+      // offline-first and usable without an account.
+      if (!authGateEnabled) return null;
+      final onSignIn = state.matchedLocation == '/signin';
+      if (!auth.isSignedIn) return onSignIn ? null : '/signin';
+      if (onSignIn) return BuiltInList.today.route;
+      return null;
+    },
     routes: [
+      GoRoute(
+        path: '/signin',
+        builder: (context, state) => const SignInScreen(),
+      ),
       // things:// style deep link: /add?title=…&notes=…&when=tomorrow
       // Creates the to-do, then lands on the appropriate list.
       GoRoute(
