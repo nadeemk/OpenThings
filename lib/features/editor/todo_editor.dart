@@ -76,9 +76,12 @@ class _TodoEditorState extends ConsumerState<TodoEditor> {
                   checked: task.completionDate != null,
                   onChanged: (v) async {
                     if (v) {
-                      _close();
+                      // Let the check animation play before closing the
+                      // editor and completing — closing first would
+                      // unmount this checkbox mid-animation.
                       await Future<void>.delayed(
                           const Duration(milliseconds: 450));
+                      if (mounted) _close();
                       await repo.complete(task.id);
                     } else {
                       await repo.reopen(task.id);

@@ -3,6 +3,13 @@ import 'package:flutter/material.dart';
 import '../../core/theme/tokens.dart';
 
 /// Things-style rounded-square checkbox with a satisfying pop animation.
+///
+/// The visual check state is optimistic: tapping flips it instantly so
+/// the animation always plays, independent of when [onChanged]'s async
+/// work (which may be deliberately delayed, e.g. to let the check
+/// animation finish before a completed to-do leaves its list) actually
+/// lands. If [checked] changes externally (sync from another device,
+/// undo elsewhere) the visual follows it.
 class TodoCheckbox extends StatefulWidget {
   const TodoCheckbox({
     super.key,
@@ -26,11 +33,16 @@ class _TodoCheckboxState extends State<TodoCheckbox>
     duration: const Duration(milliseconds: 260),
   );
 
+  late bool _visualChecked = widget.checked;
+
   @override
   void didUpdateWidget(covariant TodoCheckbox old) {
     super.didUpdateWidget(old);
-    if (widget.checked && !old.checked) {
-      _pop.forward(from: 0);
+    // Only follow external changes, not the optimistic flip we already
+    // applied locally on tap.
+    if (widget.checked != old.checked && widget.checked != _visualChecked) {
+      setState(() => _visualChecked = widget.checked);
+      if (widget.checked) _pop.forward(from: 0);
     }
   }
 
@@ -38,6 +50,13 @@ class _TodoCheckboxState extends State<TodoCheckbox>
   void dispose() {
     _pop.dispose();
     super.dispose();
+  }
+
+  void _handleTap() {
+    final next = !_visualChecked;
+    setState(() => _visualChecked = next);
+    if (next) _pop.forward(from: 0);
+    widget.onChanged(next);
   }
 
   @override
@@ -50,43 +69,45 @@ class _TodoCheckboxState extends State<TodoCheckbox>
 
     return Semantics(
       button: true,
-      checked: widget.checked,
-      label: widget.checked ? 'Mark as open' : 'Mark as completed',
+      checked: _visualChecked,
+      label: _visualChecked ? 'Mark as open' : 'Mark as completed',
       child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => widget.onChanged(!widget.checked),
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: ScaleTransition(
-          // Brief pop when checked: 1.0 -> 1.25 -> 1.0.
-          scale: TweenSequence<double>([
-            TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.25), weight: 1),
-            TweenSequenceItem(tween: Tween(begin: 1.25, end: 1.0), weight: 1),
-          ]).animate(
-              CurvedAnimation(parent: _pop, curve: Curves.easeOutCubic)),
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(end: widget.checked ? 1 : 0),
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            builder: (context, t, _) => Container(
-              width: widget.size,
-              height: widget.size,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(5),
-                border: Border.all(
-                  color: Color.lerp(border, accent, t)!,
-                  width: 1.5,
+        behavior: HitTestBehavior.opaque,
+        onTap: _handleTap,
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: ScaleTransition(
+            // Brief pop when checked: 1.0 -> 1.25 -> 1.0.
+            scale: TweenSequence<double>([
+              TweenSequenceItem(
+                  tween: Tween(begin: 1.0, end: 1.25), weight: 1),
+              TweenSequenceItem(
+                  tween: Tween(begin: 1.25, end: 1.0), weight: 1),
+            ]).animate(
+                CurvedAnimation(parent: _pop, curve: Curves.easeOutCubic)),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(end: _visualChecked ? 1 : 0),
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              builder: (context, t, _) => Container(
+                width: widget.size,
+                height: widget.size,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                  border: Border.all(
+                    color: Color.lerp(border, accent, t)!,
+                    width: 1.5,
+                  ),
+                  color: Color.lerp(Colors.transparent, accent, t),
                 ),
-                color: Color.lerp(Colors.transparent, accent, t),
+                child: t > 0.4
+                    ? Icon(Icons.check_rounded,
+                        size: widget.size - 4, color: Colors.white)
+                    : null,
               ),
-              child: t > 0.4
-                  ? Icon(Icons.check_rounded,
-                      size: widget.size - 4, color: Colors.white)
-                  : null,
             ),
           ),
         ),
-      ),
       ),
     );
   }
