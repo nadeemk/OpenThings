@@ -40,9 +40,30 @@ class TodoRow extends ConsumerStatefulWidget {
 class _TodoRowState extends ConsumerState<TodoRow> {
   bool _hovering = false;
 
+  /// Optimistic override for the completed look (checkbox fill +
+  /// strikethrough). Set instantly on tap so both animate together and
+  /// stay visible for the grace period before the underlying write
+  /// actually removes the row from its list; null defers to the data.
+  bool? _optimisticChecked;
+
   Task get task => widget.task;
   bool get showTodayStar => widget.showTodayStar;
   bool get showWhenBadge => widget.showWhenBadge;
+
+  @override
+  void didUpdateWidget(covariant TodoRow old) {
+    super.didUpdateWidget(old);
+    if (old.task.id != widget.task.id) {
+      // This State was reused for a different to-do (e.g. list
+      // reordering) — drop any stale optimistic flag.
+      _optimisticChecked = null;
+    } else if (_optimisticChecked != null &&
+        (widget.task.completionDate != null) == _optimisticChecked) {
+      // The real data caught up with our guess; stop overriding so
+      // later external changes (another device, undo) are reflected.
+      _optimisticChecked = null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +73,7 @@ class _TodoRowState extends ConsumerState<TodoRow> {
     }
 
     final theme = Theme.of(context);
-    final checked = task.completionDate != null;
+    final checked = _optimisticChecked ?? (task.completionDate != null);
     final checklistAsync = ref.watch(checklistProvider(task.id));
     final tagsAsync = ref.watch(taskTagsProvider(task.id));
     final selection = ref.watch(selectedTaskIdsProvider);
@@ -88,10 +109,14 @@ class _TodoRowState extends ConsumerState<TodoRow> {
             TodoCheckbox(
               checked: checked,
               onChanged: (v) async {
+                // Flip instantly so the check + strikethrough animate
+                // together and stay visible during the grace delay
+                // below — the row remains in its list until the actual
+                // write lands, since that's what triggers list rules to
+                // drop it.
+                setState(() => _optimisticChecked = v);
                 final repo = ref.read(taskRepositoryProvider);
                 if (v) {
-                  // Grace delay so the check animation is visible before
-                  // the row leaves the list, like Things.
                   await Future<void>.delayed(
                       const Duration(milliseconds: 450));
                   await repo.complete(task.id);

@@ -96,10 +96,17 @@ class _WideShell extends StatelessWidget {
   }
 }
 
-class _NarrowShell extends StatelessWidget {
+class _NarrowShell extends StatefulWidget {
   const _NarrowShell({required this.child});
 
   final Widget child;
+
+  @override
+  State<_NarrowShell> createState() => _NarrowShellState();
+}
+
+class _NarrowShellState extends State<_NarrowShell> {
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
@@ -111,18 +118,33 @@ class _NarrowShell extends StatelessWidget {
       BuiltInList.anytime,
     ];
     final index = tabs.indexWhere((l) => location.startsWith(l.route));
+    // "More" is highlighted whenever the current screen isn't one of the
+    // four primary tabs — reachable lists it opens include Someday,
+    // Logbook, Trash, Areas, and Projects.
+    final onMoreScreen = index < 0 && location != '/';
     return Scaffold(
+      key: _scaffoldKey,
       drawer: const Drawer(child: SafeArea(child: Sidebar())),
-      body: child,
+      body: widget.child,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: index < 0 ? 1 : index,
-        onDestinationSelected: (i) => context.go(tabs[i].route),
+        selectedIndex: onMoreScreen ? tabs.length : (index < 0 ? 1 : index),
+        onDestinationSelected: (i) {
+          if (i == tabs.length) {
+            _scaffoldKey.currentState?.openDrawer();
+          } else {
+            context.go(tabs[i].route);
+          }
+        },
         destinations: [
           for (final list in tabs)
             NavigationDestination(
               icon: Icon(list.icon, color: list.color),
               label: list.title,
             ),
+          const NavigationDestination(
+            icon: Icon(Icons.menu_rounded),
+            label: 'More',
+          ),
         ],
       ),
     );

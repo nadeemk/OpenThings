@@ -4,12 +4,12 @@ import '../../core/theme/tokens.dart';
 
 /// Things-style rounded-square checkbox with a satisfying pop animation.
 ///
-/// The visual check state is optimistic: tapping flips it instantly so
-/// the animation always plays, independent of when [onChanged]'s async
-/// work (which may be deliberately delayed, e.g. to let the check
-/// animation finish before a completed to-do leaves its list) actually
-/// lands. If [checked] changes externally (sync from another device,
-/// undo elsewhere) the visual follows it.
+/// Purely controlled by [checked]: callers that delay the underlying
+/// data write (e.g. to let a completed to-do stay visible for a beat
+/// before it leaves its list) must flip their own optimistic state
+/// immediately on tap, not wait for the write to land — otherwise the
+/// checkbox never gets a chance to render "checked" before the row
+/// disappears. See TodoRow and TodoEditor.
 class TodoCheckbox extends StatefulWidget {
   const TodoCheckbox({
     super.key,
@@ -33,16 +33,11 @@ class _TodoCheckboxState extends State<TodoCheckbox>
     duration: const Duration(milliseconds: 260),
   );
 
-  late bool _visualChecked = widget.checked;
-
   @override
   void didUpdateWidget(covariant TodoCheckbox old) {
     super.didUpdateWidget(old);
-    // Only follow external changes, not the optimistic flip we already
-    // applied locally on tap.
-    if (widget.checked != old.checked && widget.checked != _visualChecked) {
-      setState(() => _visualChecked = widget.checked);
-      if (widget.checked) _pop.forward(from: 0);
+    if (widget.checked && !old.checked) {
+      _pop.forward(from: 0);
     }
   }
 
@@ -50,13 +45,6 @@ class _TodoCheckboxState extends State<TodoCheckbox>
   void dispose() {
     _pop.dispose();
     super.dispose();
-  }
-
-  void _handleTap() {
-    final next = !_visualChecked;
-    setState(() => _visualChecked = next);
-    if (next) _pop.forward(from: 0);
-    widget.onChanged(next);
   }
 
   @override
@@ -69,11 +57,11 @@ class _TodoCheckboxState extends State<TodoCheckbox>
 
     return Semantics(
       button: true,
-      checked: _visualChecked,
-      label: _visualChecked ? 'Mark as open' : 'Mark as completed',
+      checked: widget.checked,
+      label: widget.checked ? 'Mark as open' : 'Mark as completed',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: _handleTap,
+        onTap: () => widget.onChanged(!widget.checked),
         child: Padding(
           padding: const EdgeInsets.all(6),
           child: ScaleTransition(
@@ -86,7 +74,7 @@ class _TodoCheckboxState extends State<TodoCheckbox>
             ]).animate(
                 CurvedAnimation(parent: _pop, curve: Curves.easeOutCubic)),
             child: TweenAnimationBuilder<double>(
-              tween: Tween(end: _visualChecked ? 1 : 0),
+              tween: Tween(end: widget.checked ? 1 : 0),
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
               builder: (context, t, _) => Container(

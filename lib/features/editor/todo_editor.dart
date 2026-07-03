@@ -30,6 +30,11 @@ class _TodoEditorState extends ConsumerState<TodoEditor> {
   bool _seeded = false;
   bool _previewNotes = false;
 
+  /// Same optimistic pattern as TodoRow: flip instantly on tap so the
+  /// check + strikethrough animate immediately instead of waiting for
+  /// the delayed write.
+  bool? _optimisticChecked;
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -56,6 +61,11 @@ class _TodoEditorState extends ConsumerState<TodoEditor> {
     final repo = ref.read(taskRepositoryProvider);
     final checklist = ref.watch(checklistProvider(task.id)).value ?? [];
     final isDark = theme.brightness == Brightness.dark;
+    final checked = _optimisticChecked ?? (task.completionDate != null);
+    if (_optimisticChecked != null && checked == (task.completionDate != null)) {
+      // Real data caught up; stop overriding on the next external change.
+      _optimisticChecked = null;
+    }
 
     return Card(
       elevation: 6,
@@ -73,12 +83,13 @@ class _TodoEditorState extends ConsumerState<TodoEditor> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TodoCheckbox(
-                  checked: task.completionDate != null,
+                  checked: checked,
                   onChanged: (v) async {
+                    // Flip instantly so the check + strikethrough
+                    // animate together before the delayed write closes
+                    // the editor and completes the to-do.
+                    setState(() => _optimisticChecked = v);
                     if (v) {
-                      // Let the check animation play before closing the
-                      // editor and completing — closing first would
-                      // unmount this checkbox mid-animation.
                       await Future<void>.delayed(
                           const Duration(milliseconds: 450));
                       if (mounted) _close();
@@ -93,8 +104,11 @@ class _TodoEditorState extends ConsumerState<TodoEditor> {
                   child: TextField(
                     controller: _titleController,
                     autofocus: task.title.isEmpty,
-                    style: theme.textTheme.bodyLarge
-                        ?.copyWith(fontWeight: FontWeight.w600),
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      decoration:
+                          checked ? TextDecoration.lineThrough : null,
+                    ),
                     decoration: const InputDecoration(
                       hintText: 'New To-Do',
                       border: InputBorder.none,
