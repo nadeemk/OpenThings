@@ -37,7 +37,10 @@ class ListScaffold extends ConsumerWidget {
       floatingActionButton:
           onAdd == null ? null : MagicPlusFab(onTap: () => onAdd!(ref)),
       bottomNavigationBar: const BatchActionBar(),
-      body: CustomScrollView(
+      // Keep the title clear of the status bar / notch on phones.
+      body: SafeArea(
+        bottom: false,
+        child: CustomScrollView(
         slivers: [
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(
@@ -74,6 +77,7 @@ class ListScaffold extends ConsumerWidget {
             ...slivers,
           const SliverPadding(padding: EdgeInsets.only(bottom: 96)),
         ],
+        ),
       ),
     );
   }

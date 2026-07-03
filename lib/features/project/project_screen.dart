@@ -47,7 +47,9 @@ class ProjectScreen extends ConsumerWidget {
                 .createTodo(projectId: projectId)),
       ),
       bottomNavigationBar: const BatchActionBar(),
-      body: CustomScrollView(
+      body: SafeArea(
+        bottom: false,
+        child: CustomScrollView(
         slivers: [
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(
@@ -131,6 +133,7 @@ class ProjectScreen extends ConsumerWidget {
           ],
           const SliverPadding(padding: EdgeInsets.only(bottom: 96)),
         ],
+        ),
       ),
     );
   }
