@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -38,9 +37,12 @@ final authNotifierProvider = Provider<AuthNotifier>((ref) {
   return notifier;
 });
 
-/// Whether the app should force sign-in before use. True only on the web
-/// with sync configured — native apps stay offline-first.
-bool get authGateEnabled => kIsWeb && SyncConfig.enabled;
+/// Whether the app should force sign-in before use. True whenever sync
+/// is configured (on every platform): the whole point is that each
+/// device shows YOUR account's list, so we require sign-in first. After
+/// the initial sign-in the session persists, so the app still opens and
+/// works offline. Builds without sync keys stay local-only, no gate.
+bool get authGateEnabled => SyncConfig.enabled;
 
 /// Turns raw Supabase auth errors into plain language.
 String friendlyAuthError(Object e) {

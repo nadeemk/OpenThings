@@ -242,7 +242,7 @@ class Sidebar extends ConsumerWidget {
           ),
         ),
         const Divider(),
-        // ---- New list + sync status ----
+        // ---- New list + theme + sync status ----
         Padding(
           padding: const EdgeInsets.all(OtSpacing.sm),
           child: Row(
@@ -253,6 +253,7 @@ class Sidebar extends ConsumerWidget {
                 label: const Text('New List'),
               ),
               const Spacer(),
+              _ThemeToggle(),
               const SyncStatusButton(),
             ],
           ),
@@ -364,6 +365,26 @@ class _SidebarTile extends StatelessWidget {
             : Text('$count', style: theme.textTheme.bodyMedium),
         onTap: onTap,
       ),
+    );
+  }
+}
+
+/// Cycles the app theme System → Light → Dark.
+class _ThemeToggle extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeModeProvider);
+    final (icon, tooltip) = switch (mode) {
+      ThemeMode.system => (Icons.brightness_auto_rounded, 'Theme: System'),
+      ThemeMode.light => (Icons.light_mode_rounded, 'Theme: Light'),
+      ThemeMode.dark => (Icons.dark_mode_rounded, 'Theme: Dark'),
+    };
+    return IconButton(
+      tooltip: tooltip,
+      iconSize: 18,
+      visualDensity: VisualDensity.compact,
+      icon: Icon(icon),
+      onPressed: () => ref.read(themeModeProvider.notifier).cycle(),
     );
   }
 }

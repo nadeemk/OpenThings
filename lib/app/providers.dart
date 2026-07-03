@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/db/database.dart';
@@ -103,6 +104,44 @@ final taskTagsProvider = StreamProvider.family<List<Tag>, String>(
 /// All tags.
 final allTagsProvider = StreamProvider<List<Tag>>(
     (ref) => ref.watch(tagRepositoryProvider).watchAll());
+
+/// App theme mode (System / Light / Dark), persisted locally per device
+/// in the sync-state key-value table (theme is a device preference, not
+/// synced data).
+class ThemeModeController extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() {
+    _load();
+    return ThemeMode.system;
+  }
+
+  Future<void> _load() async {
+    final db = ref.read(databaseProvider);
+    final row = await (db.select(db.syncState)
+          ..where((s) => s.key.equals('themeMode')))
+        .getSingleOrNull();
+    if (row != null) {
+      state = ThemeMode.values.firstWhere((m) => m.name == row.value,
+          orElse: () => ThemeMode.system);
+    }
+  }
+
+  Future<void> set(ThemeMode mode) async {
+    state = mode;
+    final db = ref.read(databaseProvider);
+    await db.into(db.syncState).insertOnConflictUpdate(
+        SyncStateCompanion.insert(key: 'themeMode', value: mode.name));
+  }
+
+  /// Cycle System -> Light -> Dark.
+  void cycle() {
+    const order = [ThemeMode.system, ThemeMode.light, ThemeMode.dark];
+    set(order[(order.indexOf(state) + 1) % order.length]);
+  }
+}
+
+final themeModeProvider =
+    NotifierProvider<ThemeModeController, ThemeMode>(ThemeModeController.new);
 
 /// Which to-do is currently expanded inline for editing (null = none).
 class ExpandedTaskId extends Notifier<String?> {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'app/providers.dart';
 import 'app/router.dart';
 import 'core/theme/tokens.dart';
 import 'sync/sync_config.dart';
@@ -30,7 +31,7 @@ class OpenThingsApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: OtTheme.light(),
       darkTheme: OtTheme.dark(),
-      themeMode: ThemeMode.system,
+      themeMode: ref.watch(themeModeProvider),
       routerConfig: ref.watch(routerProvider),
     );
   }
