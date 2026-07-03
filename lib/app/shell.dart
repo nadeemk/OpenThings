@@ -124,13 +124,19 @@ class _NarrowShellState extends State<_NarrowShell> {
     final onMoreScreen = index < 0 && location != '/';
     return Scaffold(
       key: _scaffoldKey,
-      drawer: const Drawer(child: SafeArea(child: Sidebar())),
+      // endDrawer (not drawer): the "More" button that opens it sits on
+      // the right of the bottom bar, so the panel should slide in from
+      // the right too — sliding in from the opposite edge of the screen
+      // it was triggered from reads as broken, not just unusual.
+      endDrawer: const Drawer(
+        child: SafeArea(child: Sidebar(showPrimaryLists: false)),
+      ),
       body: widget.child,
       bottomNavigationBar: NavigationBar(
         selectedIndex: onMoreScreen ? tabs.length : (index < 0 ? 1 : index),
         onDestinationSelected: (i) {
           if (i == tabs.length) {
-            _scaffoldKey.currentState?.openDrawer();
+            _scaffoldKey.currentState?.openEndDrawer();
           } else {
             context.go(tabs[i].route);
           }
@@ -152,7 +158,13 @@ class _NarrowShellState extends State<_NarrowShell> {
 }
 
 class Sidebar extends ConsumerWidget {
-  const Sidebar({super.key});
+  const Sidebar({super.key, this.showPrimaryLists = true});
+
+  /// Whether to include Inbox/Today/Upcoming/Anytime. On phones these
+  /// already live in the bottom nav, so the "More" drawer only shows
+  /// what isn't reachable there — Someday, Logbook, Trash, and
+  /// Areas/Projects — instead of duplicating the bottom bar.
+  final bool showPrimaryLists;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -171,13 +183,23 @@ class Sidebar extends ConsumerWidget {
     final looseProjects =
         projects.where((p) => p.areaId == null).toList();
 
+    const primary = {
+      BuiltInList.inbox,
+      BuiltInList.today,
+      BuiltInList.upcoming,
+      BuiltInList.anytime,
+    };
+    final visibleLists = showPrimaryLists
+        ? BuiltInList.values
+        : BuiltInList.values.where((l) => !primary.contains(l));
+
     return Column(
       children: [
         Expanded(
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: OtSpacing.lg),
             children: [
-              for (final list in BuiltInList.values) ...[
+              for (final list in visibleLists) ...[
                 if (list == BuiltInList.inbox)
                   // Dropping the Magic Plus on Inbox captures a to-do
                   // there, like Things.
