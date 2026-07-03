@@ -17,8 +17,11 @@ SupabaseClient supabaseClient() => Supabase.instance.client;
 /// Strategy:
 /// - The local drift database is the write queue: every repository write
 ///   stamps `modifiedAt`, so "unsynced" = `modifiedAt > lastPushedAt`.
-/// - Push: upsert local rows changed since the push watermark.
-/// - Pull: fetch remote rows changed since the pull watermark and apply
+/// - Push: upsert local rows changed since the push watermark (safe —
+///   the watermark and the row timestamps are both this device's clock).
+/// - Pull: fetch the full remote set (no time watermark — that would
+///   compare this device's clock to other devices' clocks and drop rows
+///   under any skew) and apply
 ///   with last-writer-wins on `modified_at` (newer side wins per row).
 /// - Hard deletions propagate through a `deletions` tombstone table,
 ///   queued locally in `pending_deletions` while offline.
@@ -51,7 +54,6 @@ class SupabaseSyncService implements SyncService {
   bool _resyncQueued = false;
 
   static const _pushKey = 'lastPushedAt';
-  static const _pullKey = 'lastPulledAt';
 
   @override
   Stream<SyncStatus> get status => _statusController.stream;
@@ -272,21 +274,19 @@ class SupabaseSyncService implements SyncService {
   // ---- Pull ---------------------------------------------------------------
 
   Future<void> _pull() async {
-    final since = await _watermark(_pullKey);
-    final now = DateTime.now().toUtc();
-
-    final remoteTasks = await _client
-        .from('tasks')
-        .select()
-        .gt('modified_at', since.toIso8601String());
+    // Pull the full set each time and reconcile with last-writer-wins.
+    // We deliberately do NOT use a `modified_at > watermark` filter: the
+    // watermark would be this device's wall clock while row timestamps
+    // come from other devices' clocks, so any clock skew between devices
+    // silently drops rows (one-way sync). The dataset is small, so a
+    // full pull is both correct and cheap. LWW skips unchanged rows, so
+    // this doesn't cause write churn or sync loops.
+    final remoteTasks = await _client.from('tasks').select();
     for (final row in remoteTasks) {
       await _applyRemoteTask(row);
     }
 
-    final remoteAreas = await _client
-        .from('areas')
-        .select()
-        .gt('modified_at', since.toIso8601String());
+    final remoteAreas = await _client.from('areas').select();
     for (final row in remoteAreas) {
       await _applyLww(
         table: _db.areas,
@@ -303,10 +303,8 @@ class SupabaseSyncService implements SyncService {
       );
     }
 
-    final remoteChecklist = await _client
-        .from('checklist_items')
-        .select()
-        .gt('modified_at', since.toIso8601String());
+    final remoteChecklist =
+        await _client.from('checklist_items').select();
     for (final row in remoteChecklist) {
       await _applyLww(
         table: _db.checklistItems,
@@ -325,10 +323,7 @@ class SupabaseSyncService implements SyncService {
       );
     }
 
-    final remoteTags = await _client
-        .from('tags')
-        .select()
-        .gt('modified_at', since.toIso8601String());
+    final remoteTags = await _client.from('tags').select();
     for (final row in remoteTags) {
       await _applyLww(
         table: _db.tags,
@@ -346,11 +341,9 @@ class SupabaseSyncService implements SyncService {
       );
     }
 
-    // Apply remote tombstones.
-    final tombstones = await _client
-        .from('deletions')
-        .select()
-        .gt('deleted_at', since.toIso8601String());
+    // Apply remote tombstones (full set; deleting an absent row is a
+    // no-op, so re-applying every sync is harmless).
+    final tombstones = await _client.from('deletions').select();
     for (final row in tombstones) {
       final id = row['entity_id'] as String;
       switch (row['entity'] as String) {
@@ -366,8 +359,6 @@ class SupabaseSyncService implements SyncService {
           await (_db.delete(_db.tags)..where((t) => t.id.equals(id))).go();
       }
     }
-
-    await _setWatermark(_pullKey, now);
   }
 
   Future<void> _applyRemoteTask(Map<String, dynamic> row) async {
