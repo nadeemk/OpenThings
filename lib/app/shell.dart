@@ -124,33 +124,32 @@ class _NarrowShellState extends State<_NarrowShell> {
     final onMoreScreen = index < 0 && location != '/';
     return Scaffold(
       key: _scaffoldKey,
-      // endDrawer (not drawer): the "More" button that opens it sits on
-      // the right of the bottom bar, so the panel should slide in from
-      // the right too — sliding in from the opposite edge of the screen
-      // it was triggered from reads as broken, not just unusual.
-      endDrawer: const Drawer(
+      // Left-side drawer with "More" as the leftmost bottom-bar item, so
+      // the panel slides in from the same side as the button that opens
+      // it (the conventional side for a menu drawer).
+      drawer: const Drawer(
         child: SafeArea(child: Sidebar(showPrimaryLists: false)),
       ),
       body: widget.child,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: onMoreScreen ? tabs.length : (index < 0 ? 1 : index),
+        selectedIndex: onMoreScreen ? 0 : (index < 0 ? 2 : index + 1),
         onDestinationSelected: (i) {
-          if (i == tabs.length) {
-            _scaffoldKey.currentState?.openEndDrawer();
+          if (i == 0) {
+            _scaffoldKey.currentState?.openDrawer();
           } else {
-            context.go(tabs[i].route);
+            context.go(tabs[i - 1].route);
           }
         },
         destinations: [
+          const NavigationDestination(
+            icon: Icon(Icons.menu_rounded),
+            label: 'More',
+          ),
           for (final list in tabs)
             NavigationDestination(
               icon: Icon(list.icon, color: list.color),
               label: list.title,
             ),
-          const NavigationDestination(
-            icon: Icon(Icons.menu_rounded),
-            label: 'More',
-          ),
         ],
       ),
     );

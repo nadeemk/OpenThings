@@ -108,6 +108,36 @@ class _SyncSheetState extends ConsumerState<_SyncSheet> {
     return true;
   }
 
+  Future<void> _confirmDeleteAccount(SyncService sync) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete account?'),
+        content: const Text(
+            'This permanently deletes your account and all synced data. '
+            'Data on this device is kept.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              style: FilledButton.styleFrom(
+                  backgroundColor: OtColors.deadlineRed),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _run(() async {
+        await sync.deleteAccount();
+        // Remove the local copy too, on every platform — the account
+        // is gone.
+        await ref.read(databaseProvider).wipeLocalData();
+      });
+    }
+  }
+
   String _friendlyError(Object e) {
     final s = '$e';
     if (s.contains('anonymous_provider_disabled')) {
@@ -192,52 +222,25 @@ class _SyncSheetState extends ConsumerState<_SyncSheet> {
                           }),
                   child: Text(kIsWeb ? 'Sign out & clear' : 'Sign out'),
                 ),
-                const Spacer(),
-                TextButton(
-                  style: TextButton.styleFrom(
-                      foregroundColor: OtColors.deadlineRed),
-                  onPressed: _busy
-                      ? null
-                      : () async {
-                          final confirmed = await showDialog<bool>(
-                            context: context,
-                            builder: (dialogContext) => AlertDialog(
-                              title: const Text('Delete account?'),
-                              content: const Text(
-                                  'This permanently deletes your account '
-                                  'and all synced data. Data on this '
-                                  'device is kept.'),
-                              actions: [
-                                TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(dialogContext, false),
-                                    child: const Text('Cancel')),
-                                FilledButton(
-                                    style: FilledButton.styleFrom(
-                                        backgroundColor:
-                                            OtColors.deadlineRed),
-                                    onPressed: () =>
-                                        Navigator.pop(dialogContext, true),
-                                    child: const Text('Delete')),
-                              ],
-                            ),
-                          );
-                          if (confirmed == true) {
-                            await _run(() async {
-                              await sync.deleteAccount();
-                              // Remove the local copy too, on every
-                              // platform — the account is gone.
-                              await ref
-                                  .read(databaseProvider)
-                                  .wipeLocalData();
-                            });
-                          }
-                        },
-                  child: const Text('Delete account'),
-                ),
               ],
             ),
             const SizedBox(height: OtSpacing.xl),
+            const Divider(),
+            // Deliberately understated and separated from the primary
+            // actions above — this is destructive and shouldn't sit at
+            // the same level as "Sync now" / "Sign out".
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: theme.textTheme.bodyMedium?.color,
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: _busy ? null : () => _confirmDeleteAccount(sync),
+                child: const Text('Delete account…',
+                    style: TextStyle(fontSize: 12)),
+              ),
+            ),
           ],
         ),
       );
